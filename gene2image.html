@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>HERE -- Hematoxylin & Eosin Retrieval Engine</title>
+    <link rel="stylesheet" href="annotorious-openseadragon/dist/annotorious.min.css">
+    <link rel="stylesheet" href="static/css/Base.css">
+    <link rel="stylesheet" href="static/css/Common.css">
+    <link rel="stylesheet" href="mycss.css">
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.3/themes/base/jquery-ui.css">
+</head>
+
+<body>
+    <div>
+
+        <header class="push" role="banner">
+            <div id="nvcgSlSiteBanner" class="row">
+                <div class="slot-item only-SI large-4 columns">
+                    <a href="https://www.cancer.gov/" target="_blank">
+                        <img src="Logo_NCI.svg" width="100%">
+                    </a>
+                </div>
+
+                <div class="slot-item only-SI large-2 columns">
+                    <img src="hidare_logo3.svg" width="100%">
+                </div>
+            </div>
+        </header>
+
+        <div id="page">
+            <div class="fixedtotop" style="position: relative">
+                <div class="headroom-area slide headroom--top headroom--not-bottom">
+                    <!-- Buffer BAR -->
+                    <div class="language-bar"></div>
+                    <div id="nvcgSlUtilityBar" class="utility-background hide-for-medium-down"></div>
+                </div>
+
+                <div class="nav-search-bar gradient header">
+                    <div id="nvcgSlMainNav" class="row">
+
+                        <div class="slot-item first-SI">
+                            <div class="navigation">
+                                <nav id="mega-nav" role="navigation">
+                                    <ul class="menu nav-menu">
+                                        <li class="nav-item lvl-1 item-1">
+                                            <div class="nav-item-title">
+                                                <a href="/" class="active">
+                                                    Overview
+                                                </a>
+                                            </div>
+                                        </li>
+
+
+
+                                        <li class="nav-item lvl-1 item-7">
+                                            <div class="nav-item-title">
+                                                <a href="/help" class="">
+                                                    Help
+                                                </a>
+                                            </div>
+                                        </li>
+
+                                        <li class="nav-item lvl-1 item-8">
+                                            <div class="nav-item-title">
+                                                <a href="/contact" class="">
+                                                    Contact
+                                                </a>
+                                            </div>
+                                        </li>
+
+                                        <li class="nav-item lvl-1 item-9">
+                                            <div class="nav-item-title">
+                                                <!-- Padding empty -->
+                                            </div>
+                                        </li>
+                                    </ul>
+                                </nav>
+                            </div>
+                        </div>
+
+
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <div>
+            <!-- Insert main content here -->
+
+            <br />
+
+            <script type="text/javascript" src='/openseadragon/build/openseadragon/openseadragon.js'></script>
+            <script type="text/javascript" src='/jquery/dist/jquery.min.js'></script>
+            <script type="text/javascript"
+                src="/annotorious-openseadragon/dist/openseadragon-annotorious.min.js"></script>
+            <script type="text/javascript"
+                src="/recogito-client-plugins/plugins/annotorious-shape-labels/dist/annotorious-shape-labels.min.js"></script>
+            <script src="/mycolors.js?ver=1234" type="text/javascript"></script>
+            <script src="https://code.jquery.com/ui/1.13.3/jquery-ui.js"></script>
+
+            <h1 style="color:#002fff; text-align: center;">Gene-to-Image Retrieval for Spatial Transcriptomics
+                Data</h1>
+            <div style="padding: 2px; background-color: Ivory; text-align: center; vertical-align: middle;">
+
+                <div id="status_div1" hidden></div>
+                <div id="gene_inputs">
+                    <label for="gene_names">Gene names: </label>
+                    <input type="text" id="gene_names" value="SERPING1">
+                    <label for="cohensd_thres">Cohensd Threshold: </label>
+                    <input type="text" id="cohensd_thres" value="1" type="number">
+                    <button onclick="do_search_click_v2(this)" id="btn_search">Search</button>
+                    <button id="btn_show_coxph" hidden>Show CoxPH Results</button>
+                    <br />
+                </div>
+
+                <div id="query_images_div">
+                </div>
+                <div id="query_images_shown_div">
+                </div>
+
+                <div id="search_results_div">
+
+                </div>
+            </div>
+            <br />
+
+            <form id="status_div" hidden>
+                <div style="justify-content: center;">
+                    <h1 id="progress_text" style="color:#FF0000; text-align: center;">Please wait, searching ongoing ...
+                    </h1>
+                    <div id="myProgress">
+                        <div id="progressBar"></div>
+                    </div>
+                </div>
+            </form>
+
+
+            <div id="final_result_div"
+                style="background-color: AliceBlue; padding: 2px; text-align: center; vertical-align: middle;" hidden>
+
+                <div>
+                    <div hidden>
+                        <label style="color:blue"><b>Similar Patches</b></label>
+
+                        <label for="search_feature" style="color:red">Feature used for searching: </label>
+                        <select name="search_feature" id="search_feature">
+                            <option value="before_attention" selected>before_attention</option>
+                            <option value="before_attention_umap3d" disabled>before_attention_umap3d</option>
+                        </select>
+                        <label for="search_method" style="color:red">Method used for searching: </label>
+                        <select name="search_method" id="search_method">
+                        </select>
+
+                        k: <label><input value="50" type="text" id="knn_k"></label>
+
+                        <label for="search_project" style="color:red">Project used for searching: </label>
+                        <select name="search_project" id="search_project">
+                            <option value="ALL" selected>All</option>
+                            <option value="Adoptive_TIL_Breast">Adoptive_TIL_Breast</option>
+                            <option value="TransNEO">TransNEO</option>
+                            <option value="WiemDataCheck">Wiem</option>
+                            <option value="METABRIC">METABRIC</option>
+                            <option value="ST">ST</option>
+                            <option value="ShebaV3">Sheba</option>
+                            <option value="BintrafuspAlfa">BintrafuspAlfa</option>
+                            <option value="Mouse">MouseData(Lalage)</option>
+
+                            <option value="KenData">KenData</option>
+                            <option value="TCGA-ACC">TCGA-ACC</option>
+                            <option value="TCGA-BLCA">TCGA-BLCA</option>
+                            <option value="TCGA-BRCA">TCGA-BRCA</option>
+                            <option value="TCGA-CESC">TCGA-CESC</option>
+                            <option value="TCGA-CHOL">TCGA-CHOL</option>
+                            <option value="TCGA-COAD">TCGA-COAD</option>
+                            <option value="TCGA-DLBC">TCGA-DLBC</option>
+                            <option value="TCGA-ESCA">TCGA-ESCA</option>
+                            <option value="TCGA-GBM">TCGA-GBM</option>
+                            <option value="TCGA-HNSC">TCGA-HNSC</option>
+                            <option value="TCGA-KICH">TCGA-KICH</option>
+                            <option value="TCGA-KIRC">TCGA-KIRC</option>
+                            <option value="TCGA-KIRP">TCGA-KIRP</option>
+                            <option value="TCGA-LGG">TCGA-LGG</option>
+                            <option value="TCGA-LIHC">TCGA-LIHC</option>
+                            <option value="TCGA-LUAD">TCGA-LUAD</option>
+                            <option value="TCGA-LUSC">TCGA-LUSC</option>
+                            <option value="TCGA-MESO">TCGA-MESO</option>
+                            <option value="TCGA-OV">TCGA-OV</option>
+                            <option value="TCGA-PAAD">TCGA-PAAD</option>
+                            <option value="TCGA-PCPG">TCGA-PCPG</option>
+                            <option value="TCGA-PRAD">TCGA-PRAD</option>
+                            <option value="TCGA-READ">TCGA-READ</option>
+                            <option value="TCGA-SARC">TCGA-SARC</option>
+                            <option value="TCGA-SKCM">TCGA-SKCM</option>
+                            <option value="TCGA-STAD">TCGA-STAD</option>
+                            <option value="TCGA-TGCT">TCGA-TGCT</option>
+                            <option value="TCGA-THCA">TCGA-THCA</option>
+                            <option value="TCGA-THYM">TCGA-THYM</option>
+                            <option value="TCGA-UCEC">TCGA-UCEC</option>
+                            <option value="TCGA-UCS">TCGA-UCS</option>
+                            <option value="TCGA-UVM">TCGA-UVM</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="status_div2" hidden></div>
+                <div>
+                    <div id="gene_data_div1" hidden>
+                        <!--<a href="javascript:void(0)" id="slide_name_label"></a>-->
+                        <a href="" id="gene_data1">Gene data</a>
+                        <a href="" id="cluster_data1">Cluster data</a>
+                        <a href="" id="cluster_analysis_data1">Result1</a>
+                        <a href="" id="cluster_analysis_data21">Result2</a>
+                        <label for="gene_names1">Gene names: </label><input type="text" id="gene_names1" value="CD8A">
+                        <button id="btn_show_gene_maps1">Show gene heatmap</button>
+                        <button id="btn_show_gene_maps2" hidden>Show Gene Maps2</button>
+                    </div>
+                </div>
+                <table style="width:100%">
+                    <tr style="background-color: NavajoWhite">
+                        <td><div style="text-align: center; vertical-align: middle;"><label for="cbx_show_patches">Show</label>
+                            <select name="cbx_show_patches" id="cbx_show_patches">
+                                <option value="image">image</option>
+                                <option value="one_class_annos" selected>one cluster annotations</option>
+                                <option value="all_class_annos">all cluster annotations</option>
+                            </select>
+                            <div hidden>
+                                <label for="dblclick_type" style="color:red">Mouse Double Click Action: </label>
+                                <select name="dblclick_type" id="dblclick_type">
+                                    <option value="gene" selected>Gene</option>
+                                </select>
+                            </div>
+                        </div></td>
+                        <td>
+                            <div id="atten_or_gene" style="text-align: center; vertical-align: middle;">Gene VST heatmap</div>
+                        </td>
+                        <td>gene-related image patches</td>
+                    </tr>
+                    <tr>
+                        <td style="width:25%">
+                            <div id="viewer11" style="display: inline-block; height: 300px; width: 100%"></div>
+                        </td>
+                        <td style="width:25%">
+                            <div id="viewer21" style="display: inline-block; height: 300px; width: 100%"></div>
+                        </td>
+                        <td style="width:50%">
+                            <div id="viewer41" style="height: 300px; overflow:scroll;"></div>
+                        </td>
+                    </tr>
+                </table>
+                Comment:
+                <div id="comment_div2" style="background-color: #8CC84B"></div>
+                <div hidden>
+                    <br />
+                    Comment (generated):
+                    <div id="comment_div3" style="background-color: #ffffcc"></div>
+                </div>
+                <div id="status_info2"></div>
+            </div>
+
+            <script type="text/javascript">
+
+                var formatter = function (annotation) {
+                    var c = parseInt(annotation.id.split('-')[1]);
+                    return {
+                        'style': `stroke-width:2; stroke: ${CSS_COLOR_NAMES[c]}`
+                    }
+                }
+                var allTextLines = null;
+                var cluster_fractions_per_case = {};
+                var all_items = null;
+                var group_cluster_fractions = {};
+                var category_names = [];
+                var umap3dvis_window = null;
+                var gene_names_set = [];
+
+                let progressBar = document.getElementById("progressBar"); 
+
+                function clear_all_image_patches() {
+                    viewer11.close();
+                    viewer21.close();
+                    anno11.clearAnnotations();
+                }
+
+                function load_group_cluster_fractions(results_path, cluster_label) {
+                    group_cluster_fractions = {};
+                    category_names = [];
+                    var filename = `${results_path}/cluster_counts_by_category_fraction.csv`;
+
+                    var xhttp = new XMLHttpRequest();
+                    xhttp.onreadystatechange = function () {
+                        if (this.readyState === 4 && this.status === 200) {
+                            allText = xhttp.responseText;
+                            allTextLines = allText.split(/\r\n|\n/);
+
+                            for (let j = 0; j < allTextLines.length - 1; j++) {
+                                const splits = allTextLines[j].split(',');
+                                if (j === 0) {
+                                    group_cluster_fractions['cluster_name'] = splits.slice(1, splits.length);
+                                } else {
+                                    group_cluster_fractions[splits[0]] = splits.slice(1, splits.length);
+                                    category_names.push(splits[0]);
+                                }
+                            }
+
+                            clear_patches_for_each_cluster('viewer41', cluster_label);
+                        } else {
+                        }
+                    };
+                    xhttp.open("GET", filename, true);
+                    xhttp.send();
+                }
+
+                function load_fractions_per_case(results_path, cluster_label) {
+                    cluster_fractions_per_case = {};
+                    var filename = `${results_path}/cluster_counts_per_case.csv`;
+
+                    var xhttp = new XMLHttpRequest();
+                    xhttp.onreadystatechange = function () {
+                        if (this.readyState === 4 && this.status === 200) {
+                            allText = xhttp.responseText;
+                            allTextLines = allText.split(/\r\n|\n/);
+
+                            for (let j = 1; j < allTextLines.length - 1; j++) {
+                                const splits = allTextLines[j].split(',');
+                                const splits2 = splits[1].split('/');
+                                let svs_prefix = splits2[splits2.length - 1].replace('.svs', '');
+                                cluster_fractions_per_case[svs_prefix] = splits.slice(4, splits.length);
+                            }
+
+                            clear_patches_for_each_cluster('viewer41', cluster_label);
+                        } else {
+                        }
+                    };
+                    xhttp.open("GET", filename, true);
+                    xhttp.send();
+                }
+
+                function UrlExists(url) {
+                    var http = new XMLHttpRequest();
+                    http.open('HEAD', url, false);
+                    http.send();
+                    return http.status !== 404;
+                }
+
+
+                var viewer1, viewer2, viewer3;
+                var viewer11, viewer21, viewer31;
+                var anno1, anno11;
+
+                function load_viewers() {
+                    
+                    viewer11 = OpenSeadragon({
+                        id: "viewer11",
+                        prefixUrl: "openseadragon/build/openseadragon/images/",
+                        showNavigator: true,
+                    });
+                    anno11 = OpenSeadragon.Annotorious(viewer11, {
+                        locale: 'auto',
+                        drawOnSingleClick: false,
+                        allowEmpty: false,
+                        formatter: formatter
+                    });
+
+
+                    viewer21 = OpenSeadragon({
+                        id: "viewer21",
+                        prefixUrl: "openseadragon/build/openseadragon/images/",
+                        showNavigator: true,
+                    });
+                    viewer21.setVisible(false);
+
+                    var viewer11Leading = false;
+                    var viewer21Leading = false;
+
+                    var viewer11Handler = function () {
+                        if (viewer21Leading) {
+                            return;
+                        }
+
+                        viewer11Leading = true;
+                        viewer21.viewport.zoomTo(viewer11.viewport.getZoom());
+                        viewer21.viewport.panTo(viewer11.viewport.getCenter());
+                        viewer11Leading = false;
+                    };
+
+                    var viewer21Handler = function () {
+                        if (viewer11Leading) {
+                            return;
+                        }
+
+                        viewer21Leading = true;
+                        viewer11.viewport.zoomTo(viewer21.viewport.getZoom());
+                        viewer11.viewport.panTo(viewer21.viewport.getCenter());
+                        viewer21Leading = false;
+                    };
+
+                    viewer11.addHandler('zoom', viewer11Handler);
+                    viewer21.addHandler('zoom', viewer21Handler);
+                    viewer11.addHandler('pan', viewer11Handler);
+                    viewer21.addHandler('pan', viewer21Handler);
+
+                }
+
+                var results_path = null;
+
+                function get_results_path(project_name) {
+
+                    let version_date = '20240208v4';
+                    if (project_name.includes('KenData')) {
+                        version_date = '20240202v4';
+                    }
+                    if (project_name.includes('ST')) {
+                        version_date = '20240202v4';
+                    }
+                    return `data_HiDARE_PLIP_20240208/${version_date}_${project_name}/PanCancer2GPUsFP/shared_attention_imagenetPLIP/split1_e95_h224_density_vis/feat_before_attention_feat/test/big_images`;
+                }
+
+                function download(img) {
+                    let link = document.createElement("a");
+                    link.href = img.src;
+                    link.download = img.alt;
+                    link.style.display = "none";
+                    link.click();
+                }
+
+                function removeAllChildNodes(parent) {
+                    while (parent.firstChild) {
+                        parent.removeChild(parent.firstChild);
+                    }
+                }
+
+                function add_items_to_list(items, image_viewer, heatmap_viewer, anno_viewer, table_viewer, hidden_div_id, comment_div_id, comment_div_id2) {
+                    all_items = items;
+                    var container = document.getElementById("search_results_div");
+                    container.style.cssText = 'width: 100%; height: 160px; overflow: scroll; text-align: center; vertical-align: middle;';
+                    container.innerHTML = "";
+                    let table_str = `<br/><table id="sr_table" style="margin-left: auto; margin-right: auto;"><tr><td>prefix</td><td>cluster_label</td><td>cohensd</td><td>pvalue</td><td>pvalue_corrected</td><td>zscore</td><td>gene symbol</td><td><button id="sr_0_button" hidden></button></td></tr>`;
+                    let ids = Object.keys(all_items['cohensd']);
+                    for (let i = 0; i < ids.length; i++) {
+                        let id_name = ids[i];
+                        let button_str = `<button id="sr_${i+1}_button" onclick="show_item(this,${id_name});">Show image</button>`;
+                        table_str += `<tr id="sr_${id_name}"><td>${all_items['ST_prefix'][id_name]}</td><td>${all_items['cluster_label'][id_name]}</td><td>${all_items['cohensd'][id_name].toFixed(2)}</td><td>${all_items['pvalue'][id_name].toFixed(2)}</td><td>${all_items['pvalue_corrected'][id_name].toFixed(2)}</td><td>${all_items['zscore'][id_name].toFixed(2)}</td><td>${all_items['gene_symbol'][id_name]}</td><td>${button_str}</td>`;
+                    }
+                    table_str += '</table>';
+                    container.innerHTML = table_str;
+                    container.style.margin = '0 auto';
+                }
+
+                function get_gene_map_func(genenamesid, results_path, slide_name, ind, buttonobj) {  //gene_names1
+                    let btn = document.getElementById("btn_show_gene_maps1");
+                    let gene_names = document.getElementById(genenamesid).value;
+
+                    let params_dict1 = { 'results_path': results_path, 'slide_name': slide_name, 'gene_names': gene_names};
+
+                    btn.setAttribute("disabled", "disabled");
+                    document.getElementById("btn_search").setAttribute("disabled", "disabled");
+                    document.getElementById("search_results_div").setAttribute("disabled", "disabled");
+                    document.getElementById("sr_table").setAttribute("disabled", "disabled");
+
+                    var status_e = document.getElementById("status_div");
+                    status_e.removeAttribute("hidden");
+                    document.getElementById("progress_text").innerText = `Please wait, generating gene vst heatmap for ${gene_names} on ${slide_name} ongoing ...`;
+                    progressBar.style.width = "0%";
+
+                    var trs = document.getElementById("sr_table").getElementsByTagName("tr");
+                    for (let ii = 0; ii < trs.length; ++ii) {
+                        if (trs[ii].id === `sr_${ind}`) {
+                            trs[ii].style.backgroundColor = 'yellow';
+                        } else {
+                            trs[ii].style.backgroundColor = 'white';
+                        }
+                        document.getElementById(`sr_${ii}_button`).setAttribute("disabled", "disabled");
+                    }
+
+                    $.ajax({
+                        async: true,
+                        timeout: 59000,
+                        url: `/get_gene_map_zip_celery`,
+                        type: 'POST',
+                        crossDomain: true,
+                        processData: false,
+                        contentType: 'application/json',
+                        dataType: 'json',
+                        data: JSON.stringify(params_dict1),
+                        success: async function (resultdata, status, request) {
+                            status_url = request.getResponseHeader('Location');
+                            update_progress(status_url);
+                        },
+                        retryCount: 0,
+                        retryLimit: 100,
+                        retryTimeout: 30000000,
+                        created: Date.now(),
+                        error: function (xhr, textStatus, errorThrown) {
+                            this.retryCount++;
+                            if (this.retryCount <= this.retryLimit && Date.now() - this.created < this.retryTimeout) {
+                                $.ajax(this);
+                                return;
+                            }
+                        }
+                    });
+
+                    function update_progress(status_url) {
+                        // send GET request to status URL
+                        $.getJSON(status_url, function (resultdata) {
+                            // update UI
+                            percent = parseInt(resultdata['current'] * 100 / resultdata['total']);
+                            progressBar.style.width = percent + "%";
+                            if (resultdata['state'] != 'PENDING' && resultdata['state'] != 'PROGRESS') {
+                                if ('result' in resultdata) {
+                                    // show result
+                                    response = resultdata['result'];
+                                    let gene_dict = response;
+                                    let status = response['status'];
+                                    if (status === 'alldone') {  // status, filepath
+                                        let keys = Object.keys(response['results']);
+                                        if (keys.length > 0) {
+                                            let container = document.getElementById("atten_or_gene");
+                                            while (container.firstChild) {
+                                                container.removeChild(container.firstChild);
+                                            }
+                                            container.innerText = "";
+                                            var select_elem = document.createElement("select");
+                                            select_elem.id = "validgenes";
+                                            for (let iii = 0; iii < keys.length; iii++) {
+                                                let opiii = document.createElement("option");
+                                                opiii.text = keys[iii];
+                                                opiii.value = keys[iii];
+                                                select_elem.add(opiii, iii);
+                                            }
+                                            select_elem.onchange = function (event) {
+                                                let value = event.target.value;
+                                                viewer21.open(response['results'][value]);
+                                                viewer21.viewport.goHome();
+                                            };
+                                            let label_elem = document.createElement("label");
+                                            label_elem.setAttribute('for', 'validgenes');
+                                            label_elem.innerText = `gene vst heatmap`;
+                                            container.appendChild(label_elem);
+                                            container.appendChild(select_elem);
+                                            select_elem.options[0].selected = true;
+
+                                            $('#validgenes').val(keys[0]).change();
+                                        } else {
+                                            alert('no gene map found for these genes.');
+                                        }
+                                        viewer21.setVisible(true);
+                                        btn.removeAttribute("disabled");
+                                        btn.innerText = 'Show gene heatmap';
+                                        status_e.setAttribute("hidden", "hidden");
+                                        document.getElementById("btn_search").removeAttribute("disabled");
+
+                                        document.getElementById("search_results_div").removeAttribute("disabled");
+                                        document.getElementById("sr_table").removeAttribute("disabled");
+
+                                        for (let ii = 0; ii < trs.length; ++ii) {
+                                            if (trs[ii].id === `sr_${ind}`) {
+                                                trs[ii].style.backgroundColor = 'yellow';
+                                            } else {
+                                                trs[ii].style.backgroundColor = 'white';
+                                            }
+                                            document.getElementById(`sr_${ii}_button`).removeAttribute("disabled");
+                                        }
+                                        buttonobj.removeAttribute("disabled");
+                                    } else {
+                                        this.retryCount++;
+                                    }
+                                }
+                                else {
+                                    // something unexpected happened
+                                }
+                            }
+                            else {
+                                // rerun in 2 seconds
+                                setTimeout(function () {
+                                    update_progress(status_url);
+                                }, 2000);
+                            }
+                        });
+                    }
+                };
+
+
+                function set_for_gene_data(results_path, slide_name, gene_data_div_id, gene_data_a_id, cluster_data_a_id, btn_down_cluster_analysis_id, btn_down_cluster_analysis_id2,
+                    btn_gene_map_id, btn_gene_map_id2, genenamesid) {
+                    let existed = UrlExists(`${results_path}/../../../../gene_data/${slide_name}_gene_data.pkl`);
+                    let gene_div = document.getElementById(gene_data_div_id);
+                    if (existed) {
+                        gene_div.removeAttribute("hidden");
+                        document.getElementById(gene_data_a_id).href = `${results_path}/../../../../gene_data/${slide_name}_gene_data.pkl`;
+                        document.getElementById(cluster_data_a_id).href = `${results_path}/${slide_name}_cluster_data.pkl`;
+                        document.getElementById(btn_down_cluster_analysis_id).href = `${results_path}/${slide_name}_cluster_tests.pkl`;
+                        document.getElementById(btn_down_cluster_analysis_id2).href = `${results_path}/${slide_name}_cluster_tests2.csv`;
+
+                        let btn = document.getElementById(btn_gene_map_id);
+                        btn.onclick = function () {
+
+                            let gene_names = document.getElementById(genenamesid).value;
+
+                            let params_dict1 = { 'results_path': results_path, 'slide_name': slide_name, 'gene_names': gene_names };
+
+                            btn.setAttribute("disabled", "disabled");
+                            document.getElementById("btn_search").setAttribute("disabled", "disabled");
+
+                            var status_e = document.getElementById("status_div");
+                            status_e.removeAttribute("hidden");
+                            document.getElementById("progress_text").innerText = `Please wait, generating gene map for ${gene_names} on ${slide_name} ongoing ...`;
+                            progressBar.style.width = "0%";
+
+                            $.ajax({
+                                async: true,
+                                timeout: 59000,
+                                url: `/get_gene_map_zip_celery`,
+                                type: 'POST',
+                                crossDomain: true,
+                                processData: false,
+                                contentType: 'application/json',
+                                dataType: 'json',
+                                data: JSON.stringify(params_dict1),
+                                success: async function (resultdata, status, request) {
+                                    status_url = request.getResponseHeader('Location');
+                                    update_progress(status_url);
+                                },
+                                retryCount: 0,
+                                retryLimit: 100,
+                                retryTimeout: 30000000,
+                                created: Date.now(),
+                                error: function (xhr, textStatus, errorThrown) {
+                                    this.retryCount++;
+                                    if (this.retryCount <= this.retryLimit && Date.now() - this.created < this.retryTimeout) {
+                                        $.ajax(this);
+                                        return;
+                                    }
+                                }
+                            });
+
+                            function update_progress(status_url) {
+                                $.getJSON(status_url, function (resultdata) {
+                                    percent = parseInt(resultdata['current'] * 100 / resultdata['total']);
+                                    progressBar.style.width = percent + "%";
+                                    if (resultdata['state'] != 'PENDING' && resultdata['state'] != 'PROGRESS') {
+                                        if ('result' in resultdata) {
+                                            // show result
+                                            response = resultdata['result'];
+                                            let gene_dict = response;
+                                            let status = response['status'];
+                                            if (status === 'alldone') {  // status, filepath
+                                                let keys = Object.keys(response['results']);
+                                                if (keys.length > 0) {
+                                                    let container = document.getElementById("atten_or_gene");
+                                                    while (container.firstChild) {
+                                                        container.removeChild(container.firstChild);
+                                                    }
+                                                    container.innerText = "";
+                                                    var select_elem = document.createElement("select");
+                                                    select_elem.id = "validgenes";
+                                                    for (let iii = 0; iii < keys.length; iii++) {
+                                                        let opiii = document.createElement("option");
+                                                        opiii.text = keys[iii];
+                                                        opiii.value = keys[iii];
+                                                        select_elem.add(opiii, iii);
+                                                    }
+                                                    select_elem.onchange = function (event) {
+                                                        let value = event.target.value;
+                                                        viewer21.open(response['results'][value]);
+                                                        viewer21.viewport.goHome();
+                                                    };
+                                                    let label_elem = document.createElement("label");
+                                                    label_elem.setAttribute('for', 'validgenes');
+                                                    label_elem.innerText = `gene vst heatmap`;
+                                                    container.appendChild(label_elem);
+                                                    container.appendChild(select_elem);
+                                                    select_elem.options[0].selected = true;
+
+                                                    $('#validgenes').val(keys[0]).change();
+                                                } else {
+                                                    alert('no gene map found for these genes.');
+                                                }
+                                                viewer21.setVisible(true);
+                                                btn.removeAttribute("disabled");
+                                                btn.innerText = 'Show gene heatmap';
+                                                status_e.setAttribute("hidden", "hidden");
+                                                document.getElementById("btn_search").removeAttribute("disabled");
+                                            } else {
+                                                this.retryCount++;
+                                            }
+                                        }
+                                        else {
+                                        }
+                                    }
+                                    else {
+                                        // rerun in 2 seconds
+                                        setTimeout(function () {
+                                            update_progress(status_url);
+                                        }, 2000);
+                                    }
+                                });
+                            }
+                        };
+
+                        let btn2 = document.getElementById(btn_gene_map_id2);
+                        btn2.onclick = function () {
+
+                            let gene_names = document.getElementById(genenamesid).value;
+                            let params_dict1 = { 'results_path': results_path, 'slide_name': slide_name, 'gene_names': gene_names };
+
+                            btn2.innerText = 'Generating ... wait';
+                            btn2.setAttribute("disabled", "disabled");
+                            progressBar.style.width = "0%";
+
+                            $.ajax({
+                                timeout: 300000,
+                                url: `/get_gene_map_v3`,
+                                type: 'POST',
+                                crossDomain: true,
+                                processData: false,
+                                contentType: 'application/json',
+                                dataType: 'json',
+                                data: JSON.stringify(params_dict1),
+                                success: async function (response) {
+                                    let gene_dict = response;
+                                    let keys = Object.keys(gene_dict);
+                                    if (keys.length > 0) {
+                                        var popup1 = window.open('', '_blank', 'toolbar=0,location=0,menubar=0,width=512px,height=512px');
+                                        var new_light_color = 'rgb(' + (Math.floor((256 - 229) * Math.random()) + 230) + ',' +
+                                            (Math.floor((256 - 229) * Math.random()) + 230) + ',' +
+                                            (Math.floor((256 - 229) * Math.random()) + 230) + ')';
+
+                                        popup1.document.write(`<hl /><div style="border:1px solid black;margin: 5px;background-color: ${new_light_color}; text-align: center; vertical-align: middle;">`);
+                                        popup1.document.write(`<div style="color:red;">${slide_name}</div><br/>`);
+                                        for (let iii = 0; iii < keys.length; iii++) {
+
+                                            popup1.document.write("<hr>");
+                                            popup1.document.write('<div style="margin:5px">')
+                                            popup1.document.write(`<p>${keys[iii]}</p></br>`);
+                                            var url = `${gene_dict[keys[iii]]}`;
+                                            img = '<img alt="" src="' + url + '" style="height: 100%; width: 100%; object-fit: contain">';
+                                            popup1.document.write(img);
+                                            popup1.document.write("</div>");
+                                        }
+                                        popup1.document.write("</div>");
+                                    } else {
+                                        alert("no gene map found for these genes");
+                                    }
+
+                                    btn2.removeAttribute("disabled");
+                                    btn2.innerText = 'Show Gene Maps';
+                                },
+                                error: function (error) {
+                                    btn2.removeAttribute("disabled");
+                                    btn2.innerText = 'Show Gene Maps';
+                                }
+                            });
+                        };
+                    } else {
+                        gene_div.setAttribute("hidden", "hidden");
+                    }
+                }
+
+                function clear_patches_for_each_cluster(viewer_id, cluster_label) {
+                    let category_id = 0;
+                    let container = document.getElementById(viewer_id);
+                    container.innerHTML = "";
+                    let table_str = '<table><tr><td>cluster</td><td>patches</td></tr>';
+                    for (let i = 0; i < group_cluster_fractions['cluster_name'].length; i++) {
+                        if (i !== cluster_label) {
+                            continue
+                        }
+                        let cname = group_cluster_fractions['cluster_name'][i];
+                        table_str += `<tr><td><div style="background-color: ${CSS_COLOR_NAMES[i]}">${cname}</div></td>`;
+                        table_str += `<td><div id="${category_id}_${i}"></div></td></tr>`;
+                    }
+                    table_str += '</table>';
+                    container.innerHTML = table_str;
+                }
+
+                function show_patches_new(results_path, slide_name, viewer, anno, cluster_label) {
+                    let category_id = 0;
+                    let category_name = "class0"; 
+                    let project_name = "ST";
+                    let num_patches = 0; 
+                    let num_patches_per_case = 0;
+
+                    const filename = `${results_path}/${slide_name}_cs.json`;
+                    const xhttp = new XMLHttpRequest();
+                    xhttp.onreadystatechange = function () {
+                        if (this.readyState === 4 && this.status === 200) {
+                            let allText = JSON.parse(xhttp.responseText);
+
+                            for (let i = 0; i < group_cluster_fractions['cluster_name'].length; i++) {
+                                if (i !== cluster_label) {
+                                    continue
+                                }
+
+                                let cname = group_cluster_fractions['cluster_name'][i];
+                                let group_level_frac = group_cluster_fractions[category_name][i].substring(0, 6);
+                                allTextLines = allText[cname].split(/\r\n|\n/);
+
+                                let patch_filenames = [];
+                                let xs = [];
+                                let ys = [];
+                                let umap3dxs = [];
+                                let umap3dys = [];
+                                let umap3dzs = [];
+                                num_patches = 0;
+                                num_patches_per_case = 0;
+                                let xxs = [];
+                                let yys = [];
+                                for (let j = 0; j < allTextLines.length - 1; j++) {
+                                    let junk = allTextLines[j].split(',');
+                                    xs.push(junk[0]);
+                                    ys.push(junk[1]);
+                                    umap3dxs.push(junk[2]);
+                                    umap3dys.push(junk[3]);
+                                    umap3dzs.push(junk[4]);
+                                    num_patches = parseFloat(junk[7]);
+                                    num_patches_per_case = parseFloat((junk[8]));
+                                    xxs.push(junk[9]);
+                                    yys.push(junk[10]);
+                                    patch_filenames.push(`${results_path}/../../../../patch_images_64/${slide_name}/x${junk[9]}_y${junk[10]}.JPEG`);
+                                }
+                                let frac = 0.0;
+                                if (num_patches > 0) {
+                                    frac = parseInt(cluster_fractions_per_case[slide_name][i + 1]) / num_patches;
+                                }
+                                document.getElementById(`${category_id}_${i}`).innerHTML = "";
+                                if (patch_filenames.length > 0) {
+
+                                    var boxContainer = document.createElement("div");
+                                    boxContainer.style.cssText = "width: 100%; height: 64px; float: left; overflow: auto";
+                                    let coords_str = "";
+
+                                    for (let k = 0; k < patch_filenames.length; k++) {
+                                        let img1 = document.createElement("img");
+                                        img1.className = "img1";
+                                        img1.alt = `${cname}_${k}`;
+                                        img1.src = `${patch_filenames[k]}`;
+
+                                        const junk = img1.src.split('/')
+                                        const annoid = junk[junk.length - 1].replace('.jpg', '');
+                                        let x0 = xxs[k];
+                                        let y0 = yys[k];
+                                        coords_str += `${x0},${y0},`;
+                                        img1.addEventListener("click", (event) => {
+                                            let viewport_coord = viewer.viewport.imageToViewportCoordinates(parseInt(xs[k]), parseInt(ys[k]));
+                                            viewer.viewport.panTo(viewport_coord);
+
+                                            if (umap3dvis_window !== null) {
+                                                umap3dvis_window.postMessage(img1.src + ',' + umap3dxs[k] + ',' + umap3dys[k] + ',' + umap3dzs[k],
+                                                    "*");
+                                            } else {
+                                            }
+                                        });
+
+                                        img1.addEventListener("dblclick", (event) => {
+
+                                            let dblclick_type_e = document.getElementById("dblclick_type");
+                                            let dblclick_type = dblclick_type_e.options[dblclick_type_e.selectedIndex].value;
+                                            if (dblclick_type === "image") {
+                                                const project_type = "ST";
+                                                const search_feature = "before_attention";
+                                                const search_method = "faiss_IndexFlatIP";
+                                                const search_project = "ST";
+                                                const search_knnk = 100;
+                                                const img_url = img1.src;
+                                                var imagesearch_window = window.open(`/image_retrieval1?project_name=${project_type}&imgsrc=${img_url}&slide_name=${slide_name}&x=${x0}&y=${y0}&k=${search_knnk}&search_feature=${search_feature}&search_project=${search_project}&search_method=${search_method}`);
+                                                if (imagesearch_window !== null) {
+                                                    imagesearch_window.postMessage({
+                                                        "img_url": img1.src,
+                                                        "project_name": project_type,
+                                                        "coordx": x0,
+                                                        "coordy": y0
+                                                    }, "*");
+                                                }
+                                            } else {
+                                                var params_dict1 = {
+                                                    "project_name": project_name,
+                                                    "slide_name": slide_name,
+                                                    "x": x0,
+                                                    "y": y0
+                                                };
+
+                                                $.ajax({
+                                                    url: `/gene`,
+                                                    type: 'POST',
+                                                    crossDomain: true,
+                                                    processData: false,
+                                                    contentType: 'application/json',
+                                                    dataType: 'json',
+                                                    data: JSON.stringify(params_dict1),
+                                                    success: async function (response) {
+                                                        const gene_dict = response['gene_dict'];
+                                                        if (gene_dict.length > 0) {
+                                                            var popup1 = window.open('', '_blank', 'toolbar=0,location=0,menubar=0,width=512px,height=512px');
+                                                            var a = document.createElement("a");
+                                                            var file = new Blob([gene_dict], { type: 'text/plain' });
+                                                            a.href = URL.createObjectURL(file);
+                                                            a.download = `${project_name}_${slide_name}_x${x0}_y${y0}.json`;
+                                                            a.innerText = 'Download as json'
+                                                            popup1.document.write(`<b>Filename: ${slide_name}</b><br/>`);
+                                                            popup1.document.write(`<b>Spot position: (${x0}, ${y0})</b><br/>`);
+                                                            popup1.document.write(a.outerHTML);
+                                                            popup1.document.write("<hr>");
+                                                            popup1.document.write(response['gene_exp']);
+                                                        } else {
+                                                            alert("no gene data for this spot");
+                                                        }
+                                                    },
+                                                    error: function (error) {
+                                                    }
+                                                });
+                                            }
+
+                                        });
+                                        boxContainer.appendChild(img1);
+                                    }
+                                    document.getElementById(`${category_id}_${i}`).appendChild(boxContainer);
+
+                                    if (true) {
+                                        let a1 = document.createElement('button');
+                                        a1.innerText = 'Download patches';
+                                        a1.addEventListener("click", (event) => {
+                                            let params_dict1 = { 'images_dir': `${results_path}/${slide_name}_cs.json`, 'cname': `${cname}` };
+
+                                            a1.innerText = 'Downloading ...';
+                                            a1.setAttribute("disabled", "disabled");
+                                            $.ajax({
+                                                url: `/download_patches2`,
+                                                type: 'POST',
+                                                crossDomain: true,
+                                                processData: false,
+                                                contentType: 'application/json',
+                                                dataType: 'json',
+                                                data: JSON.stringify(params_dict1),
+                                                success: async function (response) {
+                                                    const a = document.createElement('a');
+                                                    a.style = "display:none";
+                                                    a.setAttribute('href', response['filepath']);
+                                                    a.click();
+
+                                                    a1.removeAttribute("disabled");
+                                                    a1.innerText = 'Download patches';
+                                                },
+                                                error: function (error) {
+                                                }
+                                            });
+                                        });
+                                        document.getElementById(`${category_id}_${i}`).appendChild(a1);
+                                    }
+
+
+                                    if (coords_str.length > 0) {
+                                        const a1 = document.createElement('button');
+                                        a1.innerText = 'Download genes';
+                                        a1.addEventListener("click", (event) => {
+                                            var params_dict1 = [{ 'project_name': project_name, 'slide_name': slide_name, 'coords': coords_str }];
+
+                                            a1.innerText = 'Downloading ...';
+                                            a1.setAttribute("disabled", "disabled");
+                                            $.ajax({
+                                                url: `/download_gene`,
+                                                type: 'POST',
+                                                crossDomain: true,
+                                                processData: false,
+                                                contentType: 'application/json',
+                                                dataType: 'json',
+                                                data: JSON.stringify(params_dict1),
+                                                success: async function (response) {
+                                                    const blob = new Blob([response['gene_csv']], { type: 'text/csv' });
+                                                    const url = window.URL.createObjectURL(blob);
+                                                    const a = document.createElement('a');
+                                                    a.style = "display:none";
+                                                    a.setAttribute('href', url);
+                                                    a.setAttribute('download', `${project_name}_${slide_name}_searched_spots_gene_count.csv`);
+                                                    a.click();
+                                                    a1.removeAttribute("disabled");
+                                                    a1.innerText = 'Download gene counts';
+                                                },
+                                                error: function (error) {
+                                                }
+                                            });
+                                        });
+                                        document.getElementById(`${category_id}_${i}`).appendChild(a1);
+                                    }
+                                } else {
+                                }
+                            }
+                        }
+                    };
+                    xhttp.open("GET", filename, true);
+                    xhttp.send();
+                }
+
+                function show_patches1(results_path, slide_name, cluster_label) {
+
+                    show_patches_new(results_path, slide_name, viewer11, anno11, cluster_label);
+                }
+
+
+                var current_ind = -1;
+                function show_item(buttonobj,ind) {
+                    buttonobj.setAttribute("disabled", "disabled");
+                    document.getElementById("search_results_div").setAttribute("disabled", "disabled");
+
+                    var allbuttons = document.getElementById("sr_table").elements;
+
+                    var trs = document.getElementById("sr_table").getElementsByTagName("tr");
+                    for (let ii = 0; ii < trs.length; ++ii) {
+                        if (trs[ii].id === `sr_${ind}`) {
+                            trs[ii].style.backgroundColor = 'yellow';
+                        } else {
+                            trs[ii].style.backgroundColor = 'white';
+                        }
+                        document.getElementById(`sr_${ii}_button`).setAttribute("disabled", "disabled");
+                    }
+
+                    let slide2_name = all_items['ST_prefix'][ind];
+                    let cluster_setting = all_items['cluster_setting'][ind];
+                    let cluster_label = parseInt(all_items['cluster_label'][ind]);
+                    let gene_symbol = all_items['gene_symbol'][ind];
+                    let note = all_items['note'][ind];
+                    let note_generated = all_items['note_generated'][ind];
+                    document.getElementById("gene_names1").value = gene_symbol;
+                    document.getElementById("comment_div2").innerText = note;
+                    document.getElementById("comment_div3").innerText = note_generated;
+                    let results_path = `data_HiDARE_PLIP_20240208/20240202v4_ST/PanCancer2GPUsFP/shared_attention_imagenetPLIP/split1_e95_h224_density_vis/feat_before_attention_feat/test/analysis/one_patient_top_128/${cluster_setting}/${slide2_name}`;
+
+                    load_group_cluster_fractions(results_path, cluster_label);
+                    load_fractions_per_case(results_path, cluster_label);
+
+                    viewer11.close();
+                    viewer21.close();
+                    viewer21.setVisible(false);
+                    viewer11.open(`${results_path}/../../../../../../../../../big_images/${slide2_name}_big_orig.dzi`);
+                    viewer11.viewport.goHome();
+                    anno11.clearAnnotations();
+                    document.getElementById("atten_or_gene").innerText = "gene vst heatmap";
+
+                    set_for_gene_data(results_path, slide2_name, "gene_data_div1", "gene_data1", "cluster_data1", "cluster_analysis_data1", "cluster_analysis_data21",
+                        "btn_show_gene_maps1", "btn_show_gene_maps2", "gene_names1");
+
+                    anno11.clearAnnotations();
+                    let dblclick_type_e = document.getElementById("cbx_show_patches");
+                    let dblclick_type = dblclick_type_e.options[dblclick_type_e.selectedIndex].value;
+                    if (dblclick_type === "all_class_annos") {
+                        anno11.loadAnnotations(`${results_path}/${slide2_name}_patches_annotations.json`);
+                    } else if (dblclick_type === "one_class_annos") {
+                        anno11.setAnnotations(all_items['annotations'][ind]);
+                    }
+
+                    show_patches1(results_path, slide2_name, cluster_label);
+
+                    get_gene_map_func("gene_names1", results_path, slide2_name, ind, buttonobj);
+
+                    document.getElementById("final_result_div").removeAttribute("hidden");
+
+                    current_ind = ind;
+                    
+                }
+
+                document.getElementById("cbx_show_patches").onchange = function () {
+                    if (current_ind === -1) {
+                        return;
+                    }
+                    let slide2_name = all_items['ST_prefix'][current_ind];
+                    let cluster_setting = all_items['cluster_setting'][current_ind];
+
+                    let results_path = `data_HiDARE_PLIP_20240208/20240202v4_ST/PanCancer2GPUsFP/shared_attention_imagenetPLIP/split1_e95_h224_density_vis/feat_before_attention_feat/test/analysis/one_patient_top_128/${cluster_setting}/${slide2_name}`;
+
+                    anno11.clearAnnotations();
+                    let dblclick_type_e = document.getElementById("cbx_show_patches");
+                    let dblclick_type = dblclick_type_e.options[dblclick_type_e.selectedIndex].value;
+                    if (dblclick_type === "all_class_annos") {
+                        anno11.loadAnnotations(`${results_path}/${slide2_name}_patches_annotations.json`);
+                    } else if (dblclick_type === "one_class_annos") {
+                        anno11.setAnnotations(all_items['annotations'][current_ind]);
+                    }
+                }
+
+
+
+                function do_search_v2(params_dict1) {
+                    anno11.clearAnnotations();
+                    removeAllChildNodes(document.getElementById("viewer41"));
+                    document.getElementById("viewer41").innerHTML = "";
+                    removeAllChildNodes(document.getElementById("comment_div2"));
+                    document.getElementById("comment_div2").innerHTML = "";
+                    removeAllChildNodes(document.getElementById("comment_div3"));
+                    document.getElementById("comment_div3").innerHTML = "";
+                    removeAllChildNodes(document.getElementById("status_info2"));
+                    document.getElementById("status_info2").innerText = "";
+                    removeAllChildNodes(document.getElementById("search_results_div"));
+                    document.getElementById("search_results_div").innerHTML = "";
+                    document.getElementById("search_results_div").style.cssText = "";
+                    progressBar.style.width = "0%";
+
+                    var status_e = document.getElementById("status_div");
+                    var btn_search_e = document.getElementById("btn_search");
+                    var btn_show_coxph = document.getElementById("btn_show_coxph");
+                    btn_show_coxph.setAttribute("hidden", "hidden");
+                    status_e.removeAttribute("hidden");
+                    document.getElementById("final_result_div").setAttribute("hidden", "hidden");
+                    document.getElementById("progress_text").innerText = `Please wait, gene2image searching ongoing ...`;
+                    btn_search_e.setAttribute("disabled", "disabled");
+                    $.ajax({
+                        timeout: 300000,
+                        url: `/gene_search_v2_celery`,
+                        type: 'POST',
+                        crossDomain: true,
+                        processData: false,
+                        contentType: 'application/json',
+                        dataType: 'json',
+                        data: JSON.stringify(params_dict1),
+                        success: function (resultdata, status, request) {
+                            status_url = request.getResponseHeader('Location');
+                            update_progress(status_url);
+                        },
+                        error: function (error) {
+                            alert('input error or server error!')
+                        }
+                    });
+
+                    function update_progress(status_url) {
+                        // send GET request to status URL
+                        $.getJSON(status_url, function (resultdata) {
+                            // update UI
+                            percent = parseInt(resultdata['current'] * 100 / resultdata['total']);
+                            progressBar.style.width = percent + "%";
+                            document.getElementById("progress_text").innerText += '\n' + resultdata['status'];
+                            if (resultdata['state'] != 'PENDING' && resultdata['state'] != 'PROGRESS') {
+                                if ('result' in resultdata) {
+                                    // show result
+                                    response = resultdata['result'];
+                                    if (response['response'] === '') {
+                                        alert('Not found these genes. Please check the inputs.');
+                                    } else {
+
+                                        add_items_to_list(JSON.parse(response['response']), viewer11, viewer21, anno11, 'viewer41', 'status_div2', 'comment_div2', 'comment_div3');
+
+                                        if (Object.keys(response['coxph_html_dict']).length > 0) { 
+
+                                            btn_show_coxph.removeAttribute("hidden");
+                                            btn_show_coxph.addEventListener("click", (event) => {
+                                                var popup = window.open('', '_blank', 'toolbar=0,location=0,menubar=0,width=1200px,height=600px');
+                                                // popup.document.write(response['coxph_html_dict']['LumA']);
+                                                setTimeout(() => popup.document.title = 'CoxPH Results', 50);
+                                                for (let [name, item] of Object.entries(response['coxph_html_dict'])) {
+                                                    var new_light_color = 'rgb(' + (Math.floor((256 - 229) * Math.random()) + 230) + ',' +
+                                                        (Math.floor((256 - 229) * Math.random()) + 230) + ',' +
+                                                        (Math.floor((256 - 229) * Math.random()) + 230) + ')';
+
+                                                    popup.document.write(`<hl /><div style="border:1px solid black;margin: 5px;background-color: ${new_light_color}">`);
+                                                    popup.document.write(`<div style="color:red;font-size: 32px">${name}</div><br/>`);
+                                                    popup.document.write(item['summary']);
+
+                                                    popup.document.write("<hr>");
+                                                    popup.document.write('<div style="margin:5px">')
+                                                    if (item['values'].length > 0) {
+                                                        let a = document.createElement("a");
+                                                        a.style.cssText = "margin:2px";
+                                                        let file = new Blob([item['values']], { type: 'text/plain' });
+                                                        a.href = URL.createObjectURL(file);
+                                                        a.download = `${name}_feat_sim.csv`;
+                                                        a.innerText = 'Download feature similarity data';
+                                                        popup.document.write(a.outerHTML);
+                                                    }
+                                                    if (item['clinical'].length > 0) {
+                                                        let a = document.createElement("a");
+                                                        a.style.cssText = "margin:2px";
+                                                        let file = new Blob([item['clinical']], { type: 'text/plain' });
+                                                        a.href = URL.createObjectURL(file);
+                                                        a.download = `${name}_clinical.csv`;
+                                                        a.innerText = 'Download clinical data';
+                                                        popup.document.write(a.outerHTML);
+                                                    }
+                                                    popup.document.write('</div>')
+                                                    popup.document.write('</div>')
+                                                }
+                                            });
+                                        }
+
+                                        if (Object.keys(response['images_shown_urls']).length > 0) {
+                                            for (let [ii, img_url] of Object.entries(response['images_shown_urls'])) {
+                                                let query_img_ii = document.getElementById(`query_img_${ii}`);
+
+                                                query_img_ii.addEventListener("dblclick", (event) => {
+                                                    var popup = window.open('', '_blank', 'toolbar=0,location=0,menubar=0,width=600px,height=600px');
+                                                    // popup.document.write(response['coxph_html_dict']['LumA']);
+                                                    setTimeout(() => popup.document.title = `Query image ${ii} with attention scores`, 50);
+                                                    popup.document.write('<div style="overflow: auto">')
+                                                    popup.document.write(`<img src="${img_url}" alt="" style="height: 95%"/>`);
+                                                    popup.document.write('</div>');
+                                                });
+                                            }
+                                        }
+                                    }
+                                    //await new Promise(r => setTimeout(r, 3000));
+                                    status_e.setAttribute("hidden", "hidden");
+                                    btn_search_e.removeAttribute("disabled"); 
+                                }
+                            }
+                            else {
+                                // rerun in 2 seconds
+                                setTimeout(function () {
+                                    update_progress(status_url);
+                                }, 2000);
+                            }
+                        });
+                    }
+                }
+                load_viewers();
+
+                function do_search_click_v2(btn) {
+
+                    all_items = {};
+                    current_ind = -1;
+                    allTextLines = null;
+                    cluster_fractions_per_case = {};
+                    group_cluster_fractions = {};
+                    category_names = [];
+                    umap3dvis_window = null;
+
+                    // viewer11.close();
+                    // viewer21.close();
+                    anno11.clearAnnotations();
+
+                    let gene_names = document.getElementById("gene_names").value;
+                    let cohensd_thres = document.getElementById("cohensd_thres").value;
+
+                    let params_dict1 = { 'gene_names': gene_names, 'cohensd_thres': cohensd_thres };
+
+                    do_search_v2(params_dict1);
+                }
+
+            </script>
+
+        </div>
+        <br />
+    </div>
+
+
+    <!-- FOOTER -->
+    <footer class="site-footer">
+        <div id="nvcgSlFooter">
+            <div class="slot-item only-SI">
+                <div class="site-footer__container">
+                    <div class="site-footer__agencies">
+                        <ul>
+                            <li><a href="http://www.hhs.gov/" target="_blank">U.S. Department of Health and Human
+                                    Services</a></li>
+                            <li><a href="https://www.cancer.gov/" target="_blank">National Cancer Institute</a></li>
+                            <li><a href="http://usa.gov/" target="_blank">USA.gov</a></li>
+                            <li><a href="https://www.hhs.gov/vulnerability-disclosure-policy/index.html"
+                                    target="_blank">HHS Vulnerability Disclosure</a></li>
+
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+    <!-- END FOOTER -->
+</body>
+
+</html>
