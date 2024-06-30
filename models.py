@@ -73,86 +73,98 @@ class AttentionModel_bak(nn.Module):
 
 # survival not shared, all other shared
 class AttentionModel(nn.Module):
-    def __init__(self, classification_dict, regression_list, args):
+    def __init__(self):
         super().__init__()
 
-        self.has_cls = len(classification_dict) > 0
-        self.has_reg = len(regression_list) > 0
-        self.args = args
-        self.classification_dict = classification_dict
-        self.regression_list = regression_list
+        self.classification_dict = {
+            'CDH1_cls': ['Gain_Or_Unknown_Or_NaN', 'Loss', 'Other'],
+            'GATA3_cls': ['Gain_Or_Unknown_Or_NaN', 'Loss', 'Other'],
+            'PIK3CA_cls': ['Loss_Or_Unknown_Or_NaN', 'Gain', 'Other'],
+            'TP53_cls': ['Gain_Or_Unknown_Or_NaN', 'Loss', 'Other'],
+            'KRAS_cls': ['Loss_Or_Unknown_Or_NaN', 'Gain', 'Other'],
+            'ARID1A_cls': ['Gain_Or_Unknown_Or_NaN', 'Loss', 'Other'],
+            'PTEN_cls': ['Gain_Or_Unknown_Or_NaN', 'Loss', 'Other'],
+            'BRAF_cls': ['Loss_Or_Unknown_Or_NaN', 'Gain', 'Other'],
+            'APC_cls': ['Gain_Or_Unknown_Or_NaN', 'Loss', 'Other'],
+            'ATRX_cls': ['Gain_Or_Unknown_Or_NaN', 'Loss', 'Other'],
+            'IDH1_cls': ['Gain_Or_Unknown_Or_NaN', 'Loss_Or_Switch', 'Other']
+        }
+        self.regression_list = [
+            'Cytotoxic_T_Lymphocyte',
+            'TIDE_CAF',
+            'TIDE_Dys',
+            'TIDE_M2',
+            'TIDE_MDSC',
+            'HALLMARK_ADIPOGENESIS_sum',
+            'HALLMARK_ALLOGRAFT_REJECTION_sum',
+            'HALLMARK_ANDROGEN_RESPONSE_sum',
+            'HALLMARK_ANGIOGENESIS_sum',
+            'HALLMARK_APICAL_JUNCTION_sum',
+            'HALLMARK_APICAL_SURFACE_sum',
+            'HALLMARK_APOPTOSIS_sum',
+            'HALLMARK_BILE_ACID_METABOLISM_sum',
+            'HALLMARK_CHOLESTEROL_HOMEOSTASIS_sum',
+            'HALLMARK_COAGULATION_sum',
+            'HALLMARK_COMPLEMENT_sum',
+            'HALLMARK_DNA_REPAIR_sum',
+            'HALLMARK_E2F_TARGETS_sum',
+            'HALLMARK_EPITHELIAL_MESENCHYMAL_TRANSITION_sum',
+            'HALLMARK_ESTROGEN_RESPONSE_EARLY_sum',
+            'HALLMARK_ESTROGEN_RESPONSE_LATE_sum',
+            'HALLMARK_FATTY_ACID_METABOLISM_sum',
+            'HALLMARK_G2M_CHECKPOINT_sum',
+            'HALLMARK_GLYCOLYSIS_sum',
+            'HALLMARK_HEDGEHOG_SIGNALING_sum',
+            'HALLMARK_HEME_METABOLISM_sum',
+            'HALLMARK_HYPOXIA_sum',
+            'HALLMARK_IL2_STAT5_SIGNALING_sum',
+            'HALLMARK_IL6_JAK_STAT3_SIGNALING_sum',
+            'HALLMARK_INFLAMMATORY_RESPONSE_sum',
+            'HALLMARK_INTERFERON_ALPHA_RESPONSE_sum',
+            'HALLMARK_INTERFERON_GAMMA_RESPONSE_sum',
+            'HALLMARK_KRAS_SIGNALING_DN_sum',
+            'HALLMARK_KRAS_SIGNALING_UP_sum',
+            'HALLMARK_MITOTIC_SPINDLE_sum',
+            'HALLMARK_MTORC1_SIGNALING_sum',
+            'HALLMARK_MYC_TARGETS_V1_sum',
+            'HALLMARK_MYC_TARGETS_V2_sum',
+            'HALLMARK_MYOGENESIS_sum',
+            'HALLMARK_NOTCH_SIGNALING_sum',
+            'HALLMARK_OXIDATIVE_PHOSPHORYLATION_sum',
+            'HALLMARK_P53_PATHWAY_sum',
+            'HALLMARK_PANCREAS_BETA_CELLS_sum',
+            'HALLMARK_PEROXISOME_sum',
+            'HALLMARK_PI3K_AKT_MTOR_SIGNALING_sum',
+            'HALLMARK_PROTEIN_SECRETION_sum',
+            'HALLMARK_REACTIVE_OXYGEN_SPECIES_PATHWAY_sum',
+            'HALLMARK_SPERMATOGENESIS_sum',
+            'HALLMARK_TGF_BETA_SIGNALING_sum',
+            'HALLMARK_TNFA_SIGNALING_VIA_NFKB_sum',
+            'HALLMARK_UNFOLDED_PROTEIN_RESPONSE_sum',
+            'HALLMARK_UV_RESPONSE_DN_sum',
+            'HALLMARK_UV_RESPONSE_UP_sum',
+            'HALLMARK_WNT_BETA_CATENIN_SIGNALING_sum',
+            'HALLMARK_XENOBIOTIC_METABOLISM_sum'
+        ]
 
-        if args.attention_arch == 'shared_attention':
-            self.num_tasks = 1
-            self.index_step = 0
-        elif args.attention_arch == 'multiple_attention':
-            self.num_tasks = len(self.classification_dict)
-            self.num_tasks += len(self.regression_list)
-            self.index_step = 1
-
-        if 'patch' in self.args.model_name:
-            self.feature_extractor = tv_resnet_ae.__dict__[args.backbone](pretrained=True)
-            latent_dim = self.feature_extractor.latent_dim
-            # for param in self.feature_extractor.parameters():   # fix the feature extraction network
-            #     param.requires_grad = False
-
-            L = latent_dim  # 512
-            D = 256  # latent_dim
-            K = self.num_tasks
-            a1 = [nn.Linear(L, D), nn.Tanh()]
-            a2 = [nn.Linear(L, D), nn.Sigmoid()]
-            if 0 < args.dropout < 1:
-                a1.append(nn.Dropout(args.dropout))
-                a2.append(nn.Dropout(args.dropout))
-            self.attention_V = torch.nn.Sequential(*a1)
-            self.attention_U = torch.nn.Sequential(*a2)
-            self.attention_weights = torch.nn.Linear(D, K)
-        elif 'pretrain' in self.args.model_name:
-            network_dims = {
-                'swinv2': 768,
-                'mobilevit': 640,
-                'convnext': 768,
-                'vit': 768,
-                'beit': 768,
-                'mobilenetv1': 1024,
-                'resnet18': 512,
-                'resnet50': 2048,
-                'vithybrid': 768,
-                'mobilenetv2': 1280,
-                'mobilenetv3': 1280,
-                'CLIP': 512,
-                'PLIP': 512,
-            }
-            # size = [network_dims[args.backbone], network_dims[args.backbone]//2, network_dims[args.backbone]//2]
-            size = [network_dims[args.backbone], 256, 256]
-            # size = [512, 384, 256]  # feature after ResNet-18 is 512d
-            fc = [nn.Linear(size[0], size[1]), nn.ReLU(), nn.Dropout(args.dropout)]
-            attention_net = Attn_Net_Gated(L=size[1], D=size[2], dropout=args.dropout, n_classes=self.num_tasks)
-            fc.append(attention_net)
-            self.attention_net = nn.Sequential(*fc)
-            self.rho = nn.Sequential(*[nn.Linear(size[1], size[2]), nn.ReLU(), nn.Dropout(args.dropout)])
-            L = size[2]
-        else:
-            raise ValueError('unsupported model_name')
+        self.attention_net = nn.Sequential(*[
+            nn.Linear(512, 256), 
+            nn.ReLU(), 
+            nn.Dropout(0.25),
+            Attn_Net_Gated(L=256, D=256, dropout=0.25, n_classes=1)
+        ])
+        self.rho = nn.Sequential(*[nn.Linear(256, 256), nn.ReLU(), nn.Dropout(0.25)])
 
         classifiers = {}
         for k, labels in self.classification_dict.items():
-            classifiers[k] = nn.Linear(L, len(labels))
+            classifiers[k] = nn.Linear(256, len(labels))
         self.classifiers = nn.ModuleDict(classifiers)
         regressors = {}
         for k in self.regression_list:
-            regressors[k] = nn.Linear(L, 1)
+            regressors[k] = nn.Linear(256, 1)
         self.regressors = nn.ModuleDict(regressors)
 
         self.initialize_weights()
-
-        if 'patch' in self.args.model_name:
-            state_dict = load_state_dict_from_url(model_urls[args.backbone], progress=False)
-            self.feature_extractor.load_state_dict(state_dict, strict=False)
-
-        if args.fixed_backbone:
-            for param in self.feature_extractor.parameters():
-                param.requires_grad = False
 
     def initialize_weights(self):
         # initialize nn.Linear and nn.LayerNorm
@@ -169,13 +181,6 @@ class AttentionModel(nn.Module):
             nn.init.constant_(m.weight, 1.0)
 
     def forward(self, x, label=None, instance_eval=False, return_features=False, attention_only=False):
-        if 'patch' in self.args.model_name:
-            return self.forward_patch(x)
-        elif 'pretrain' in self.args.model_name:
-            return self.forward_pretrain(x, attention_only=attention_only)
-
-    def forward_pretrain(self, x, attention_only=False):
-
         x_path = x.squeeze(0)  # 1 x num_patches x 512  1 x 10000 x 512 --> all 256x256 pacthces
 
         A, h = self.attention_net(x_path)  # num_patches x num_tasks, num_patches x 512
@@ -189,54 +194,17 @@ class AttentionModel(nn.Module):
         h = torch.mm(A, h)  # A: num_tasks x num_patches, h_path: num_patches x 256  --> num_tasks x 256
         results_dict['global_feat'] = h
         results_dict['A'] = A
-        # for task 1, exp(x_i) / \sum_i=1^{num_pathces} exp(x_i) --> [0, 1]
         h = self.rho(h)
 
-        index = 0
-        # results_dict = {'A_raw': A_raw}
         for k, classifier in self.classifiers.items():
-            logits_k = classifier(h[index].unsqueeze(0))
+            logits_k = classifier(h[0].unsqueeze(0))
             results_dict[k + '_logits'] = logits_k
-            index += self.index_step
 
         for k, regressor in self.regressors.items():
-            values_k = regressor(h[index].unsqueeze(0)).squeeze(1)
+            values_k = regressor(h[0].unsqueeze(0)).squeeze(1)
             results_dict[k + '_logits'] = values_k
-            index += self.index_step
 
         return results_dict
-
-    def forward_patch(self, x):
-
-        # x: (BS x num_patches, num_channels, h, w)
-        batch_size, num_patches, num_channels, h, w = x.size()
-        x = torch.reshape(x, (batch_size * num_patches, num_channels, h, w))
-        feat = self.feature_extractor(x)  # features after ResNet-18 512
-
-        # for each slide, 10000 patches with size of 128x128
-        # 2 x 10000 x 512 features
-        # for other tasks
-        feat = torch.reshape(feat, (batch_size, num_patches, -1))  # B x P x 512
-        A_V = self.attention_V(feat)  # A_V: B x P x D
-        A_U = self.attention_U(feat)  # A_U: B x P x D
-        A = self.attention_weights(A_V * A_U)  # A: B x P x num_tasks
-        A = F.softmax(A, dim=1)  # B x P x num_tasks
-        h = torch.matmul(torch.transpose(A, 1, 2), feat)  # B x P x L  B x P x 256
-
-        index = 0
-        results_dict = {}
-        for k, classifier in self.classifiers.items():
-            logits_k = classifier(h[:, index, :])
-            results_dict[k + '_logits'] = logits_k
-            index += self.index_step
-
-        for k, regressor in self.regressors.items():
-            values_k = regressor(h[:, index, :]).squeeze(1)
-            results_dict[k + '_logits'] = values_k
-            index += self.index_step
-
-        return results_dict
-
 
 
 
