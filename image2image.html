@@ -122,6 +122,14 @@
                         </div>
                 </div>
             </div>
+            <div id="predictionoverlay" class="predictionoverlay"></div>
+            <div id="predictionpopup" class="predictionpopup">
+                <div style="text-align: left;padding: 1px;">
+                    <button class="predictionclose-btn" id="predictionclosePopup">Close</button>
+                        <div id="predictionContent">
+                        </div>
+                </div>
+            </div>
             <div class="divcontainer1_outer">
                 <div class="divcontainer1" id="divcontainer1">
                     <div id="divcontainer1Left">
@@ -183,7 +191,9 @@
                     <tr style="background-color: NavajoWhite">
                         <td>image 
                                 <button id="btn_show_coxph" hidden>Show CoxPH results</button>
-                                <button id="btn_show_prediction" hidden>Show case-level prediction</button> <a href="#" id="showPopup1">Show Case Info</a></td>
+                                <a href="#" id="showPopup_prediction" class="abutton">Show case-level prediction</a>
+                                <a href="#" id="showPopup1" class="abutton">Show Case Info</a>
+                            </td>
                         <td>attention map</td>
                         <td>retrieved similar images <a href="#" id="showPopup">Help</a></td>
                     </tr>
@@ -199,15 +209,6 @@
                         </td>
                     </tr>
                 </table>
-                <div hidden>
-                Comment:
-                <div id="comment_div2" style="background-color: #8CC84B"></div>
-                <br />
-                <div hidden>
-                    Comment (generated):
-                    <div id="comment_div3" style="background-color: #ffffcc"></div>
-                </div>
-                </div>
             </div>
 
             <script type="text/javascript">
@@ -303,8 +304,6 @@
                     document.getElementById("btn_search_again").setAttribute("hidden", "hidden");
                     document.getElementById("final_result_div").setAttribute("hidden", "hidden");
                     document.getElementById("viewer41").innerHTML = "";
-                    document.getElementById("comment_div2").innerHTML = "";
-                    document.getElementById("comment_div3").innerHTML = "";
                     document.getElementById("status_info2").innerText = "";
                     document.getElementById("status_div2").innerText = "";
                     progressBar.style.width = "0%";
@@ -470,13 +469,13 @@
 
 
                 let the_first_patch_id = null;
+                let the_first_x = -1;
+                let the_first_y = -1;
                 let commentcontent = null;
 
-                function add_items_to_right_column(items, ranks, image_viewer, heatmap_viewer, anno_viewer, table_viewer, hidden_div_id, comment_div_id, comment_div_id2) {
+                function add_items_to_right_column(items, ranks, image_viewer, heatmap_viewer, anno_viewer, table_viewer, hidden_div_id) {
 
                     let hiddendivid = document.getElementById(hidden_div_id);
-                    let commentdivid = document.getElementById(comment_div_id);
-                    let commentdivid2 = document.getElementById(comment_div_id2);
                     let container = document.getElementById(table_viewer);
                     container.innerHTML = "";
                     const slide_names = Object.keys(items);
@@ -528,10 +527,6 @@
                             let item = items[slide_name]['images'][j];
 
                             let img1 = document.createElement("img");
-                            if ((i === 0) && (j === 0)) {
-                                img1.id = `${slide_name}_${i}_${j}_patch_image`;
-                                the_first_patch_id = img1.id;
-                            }
                             img1.className = "img1";
                             img1.alt = item['image_name'];
                             img1.src = item['img_url'];
@@ -543,65 +538,23 @@
                             if (has_gene) {
                                 coords_str += `${x0},${y0},`;
                             }
-
+                            if ((i === 0) && (j === 0)) {
+                                img1.id = `${slide_name}_${i}_${j}_patch_image`;
+                                the_first_patch_id = img1.id;
+                                the_first_x = x;
+                                the_first_y = y;
+                            }
                             img1.addEventListener("click", (event) => {
                                 if (hiddendivid.innerText !== `${project_name}_${slide_name}`) {
                                     show_image(project_name, slide_name, image_viewer, heatmap_viewer);
                                     show_annotations(project_name, slide_name, anno_viewer, items[slide_name]['annotations']);
                                     hiddendivid.innerText = `${project_name}_${slide_name}`;
-                                    commentdivid.innerText = items[slide_name]['comment'];
-                                    commentdivid2.innerText = items[slide_name]['comment_generated'];
-                                    document.getElementById("infoContent").innerText = items[slide_name]['comment'];
-                                    commentcontent = items[slide_name]['comment']; 
+                                    document.getElementById("infoContent").innerText = items[slide_name]['note'];
+                                    commentcontent = items[slide_name]['note'];
                                 }
                                 let viewport_coord = image_viewer.viewport.imageToViewportCoordinates(x, y);
                                 image_viewer.viewport.panTo(viewport_coord);
                             });
-
-                            img1.addEventListener("dblclick", (event) => {
-
-                                if (has_gene) {
-                                    var params_dict1 = {
-                                        "project_name": project_name,
-                                        "slide_name": slide_name,
-                                        "x": x0,
-                                        "y": y0
-                                    };
-
-                                    $.ajax({
-                                        url: `/gene`,
-                                        type: 'POST',
-                                        crossDomain: true,
-                                        processData: false,
-                                        contentType: 'application/json',
-                                        dataType: 'json',
-                                        data: JSON.stringify(params_dict1),
-                                        success: async function (response) {
-                                            const gene_dict = response['gene_dict'];
-                                            if (gene_dict.length > 0) {
-                                                var popup1 = window.open('', '_blank', 'toolbar=0,location=0,menubar=0,width=512px,height=512px');
-                                                var a = document.createElement("a");
-                                                var file = new Blob([gene_dict], { type: 'text/plain' });
-                                                a.href = URL.createObjectURL(file);
-                                                a.download = `${project_name}_${slide_name}_x${x0}_y${y0}.json`;
-                                                a.innerText = 'Download as json'
-                                                popup1.document.write(`<b>Filename: ${slide_name}</b><br/>`);
-                                                popup1.document.write(`<b>Spot position: (${x0}, ${y0})</b><br/>`);
-                                                popup1.document.write(a.outerHTML);
-                                                popup1.document.write("<hr>");
-                                                popup1.document.write(response['gene_exp']);
-                                            } else {
-                                                alert("no gene data for this spot");
-                                            }
-                                        },
-                                        error: function (error) {
-                                        }
-                                    });
-                                } else {
-                                    alert("no gene data for this spot");
-                                }
-                            });
-
 
                             boxContainer.appendChild(img1);
                         }
@@ -628,7 +581,7 @@
                                 a1.innerText = 'Downloading ...';
                                 a1.setAttribute("disabled", "disabled");
                                 $.ajax({
-                                    url: `/download_gene`,
+                                    url: `/download_gene2`, 
                                     type: 'POST',
                                     crossDomain: true,
                                     processData: false,
@@ -636,16 +589,16 @@
                                     dataType: 'json',
                                     data: JSON.stringify(params_dict1),
                                     success: async function (response) {
-                                        const blob = new Blob([response['gene_csv']], { type: 'text/csv' });
-                                        const url = window.URL.createObjectURL(blob);
-                                        const a = document.createElement('a');
-                                        a.style = "display:none";
-                                        a.setAttribute('href', url)
-                                        a.setAttribute('download', `${project_name}_${slide_name}_searched_spots_gene_count.csv`);
-                                        a.click();
-
+                                        if (response['filepath'] === '') {
+                                            alert('error');
+                                        } else {
+                                            const a = document.createElement('a');
+                                            a.style = "display:none";
+                                            a.setAttribute('href', response['filepath']);
+                                            a.click();
+                                        }
                                         a1.removeAttribute("disabled");
-                                        a1.innerText = 'Download gene counts';
+                                        a1.innerText = 'Download genes';
                                     },
                                     error: function (error) {
                                     }
@@ -682,7 +635,7 @@
                             a1.innerText = 'Downloading ...';
                             a1.setAttribute("disabled", "disabled");
                             $.ajax({
-                                url: `/download_gene`,
+                                url: `/download_gene2`,
                                 type: 'POST',
                                 crossDomain: true,
                                 processData: false,
@@ -690,15 +643,16 @@
                                 dataType: 'json',
                                 data: JSON.stringify(all_coords),
                                 success: async function (response) {
-                                    const blob = new Blob([response['gene_csv']], { type: 'text/csv' });
-                                    const url = window.URL.createObjectURL(blob);
-                                    const a = document.createElement('a');
-                                    a.style = "display:none";
-                                    a.setAttribute('href', url)
-                                    a.setAttribute('download', 'all_searched_spots_gene_count.csv');
-                                    a.click();
+                                    if (response['filepath'] === '') {
+                                        alert('error');
+                                    } else {
+                                        const a = document.createElement('a');
+                                        a.style = "display:none";
+                                        a.setAttribute('href', response['filepath']);
+                                        a.click();
+                                    }
                                     a1.removeAttribute("disabled");
-                                    a1.innerText = 'Download gene counts for all spots';
+                                    a1.innerText = 'Download all genes';
                                 },
                                 error: function (error) {
                                 }
@@ -728,6 +682,8 @@
 
                 var query_img_shown_urls = {};
                 function do_search(params_dict1) {
+                    the_first_x = -1;
+                    the_first_y = -1;
                     query_img_shown_urls = {};
                     if (params_dict1['search_project'] === 'ST') {
                         use_viewer21 = false;
@@ -743,44 +699,30 @@
                     }
                     anno11.clearAnnotations();
                     document.getElementById("viewer41").innerHTML = "";
-                    document.getElementById("comment_div2").innerHTML = "";
-                    document.getElementById("comment_div3").innerHTML = "";
                     document.getElementById("status_info2").innerText = "";
                     document.getElementById("status_div2").innerText = "";
-                    progressBar.style.width = "0%";
+                    progressBar.style.width = "50%";
 
                     var status_e = document.getElementById("status_div");
                     var btn_search_e = document.getElementById("btn_search");
                     var btn_show_coxph = document.getElementById("btn_show_coxph");
-                    var btn_show_prediction = document.getElementById("btn_show_prediction");
+                    // var btn_show_prediction = document.getElementById("btn_show_prediction");
                     let final_result_div = document.getElementById("final_result_div");
                     btn_show_coxph.setAttribute("hidden", "hidden");
-                    btn_show_prediction.setAttribute("hidden", "hidden");
+                    // btn_show_prediction.setAttribute("hidden", "hidden");
                     status_e.removeAttribute("hidden");
                     btn_search_e.setAttribute("disabled", "disabled");
 
                     $.ajax({
-                        url: `/image_search_celery`,
+                        url: `/image_search`,
                         type: 'POST',
                         contentType: 'application/json',
                         dataType: 'json',
                         data: JSON.stringify(params_dict1),
                         success: function (resultdata, status, request) {
-                            status_url = request.getResponseHeader('Location');
-                            update_progress(status_url);
-                        },
-                        error: function (error) {
-                        }
-                    });
-
-                    function update_progress(status_url) {
-                        $.getJSON(status_url, function (resultdata) {
-                            percent = parseInt(resultdata['current'] * 100 / resultdata['total']);
-                            progressBar.style.width = percent + "%";
-                            if (resultdata['state'] != 'PENDING' && resultdata['state'] != 'PROGRESS') {
-                                if ('result' in resultdata) {
+                            if ('result' in resultdata) {
                                     response = resultdata['result'];
-                                    add_items_to_right_column(response['response'], response['ranks'], viewer11, viewer21, anno11, 'viewer41', 'status_div2', 'comment_div2', 'comment_div3');
+                                    add_items_to_right_column(response['response'], response['ranks'], viewer11, viewer21, anno11, 'viewer41', 'status_div2');
                                     document.getElementById(the_first_patch_id).click();
                                     //await new Promise(r => setTimeout(r, 3000));
                                     status_e.setAttribute("hidden", "hidden");
@@ -836,12 +778,12 @@
                                     }
 
                                     if (Object.keys(response['pred_str']).length > 0) {
-                                        btn_show_prediction.removeAttribute("hidden");
-                                        btn_show_prediction.addEventListener("click", (event) => {
-                                            var popup1 = window.open('', '_blank', 'toolbar=0,location=0,menubar=0');
-                                            popup1.document.write(response['pred_str']);
-
-                                        });
+                                        // btn_show_prediction.removeAttribute("hidden");
+                                        // btn_show_prediction.addEventListener("click", (event) => {
+                                        //     var popup1 = window.open('', '_blank', 'toolbar=0,location=0,menubar=0');
+                                        //     popup1.document.write(response['pred_str']);
+                                        // });
+                                        document.getElementById("predictionContent").innerHTML = response['pred_str'];
                                     }
 
 
@@ -849,21 +791,18 @@
                                         for (let [ii, img_url] of Object.entries(response['images_shown_urls'])) {
                                             query_img_shown_urls[`query_img_${ii}`] = img_url;
                                         }
-                                    } else {
                                     }
+                                    // if (the_first_x > 0) {
+                                    //     let viewport_coord = viewer11.viewport.imageToViewportCoordinates(the_first_x, the_first_y);
+                                    //     viewer11.viewport.panTo(viewport_coord);
+                                    // }
+                                }
 
-                                }
-                                else {
-                                }
-                            }
-                            else {
-                                // rerun in 2 seconds
-                                setTimeout(function () {
-                                    update_progress(status_url);
-                                }, 2000);
-                            }
-                        });
-                    }
+
+                        },
+                        error: function (error) {
+                        }
+                    });
                 }
 
                 var params_dict = {
@@ -969,8 +908,6 @@
                     document.getElementById("btn_search_again").setAttribute("hidden", "hidden");
 
                     document.getElementById("viewer41").innerHTML = "";
-                    document.getElementById("comment_div2").innerHTML = "";
-                    document.getElementById("comment_div3").innerHTML = "";
                     document.getElementById("status_info2").innerText = "";
                     document.getElementById("status_div2").innerText = "";
                     progressBar.style.width = "0%";
@@ -993,8 +930,6 @@
                         document.getElementById("btn_search_again").setAttribute("hidden", "hidden");
                         document.getElementById("final_result_div").setAttribute("hidden", "hidden");
                         document.getElementById("viewer41").innerHTML = "";
-                        document.getElementById("comment_div2").innerHTML = "";
-                        document.getElementById("comment_div3").innerHTML = "";
                         document.getElementById("status_info2").innerText = "";
                         document.getElementById("status_div2").innerText = "";
                         progressBar.style.width = "0%";
@@ -1008,8 +943,6 @@
                     document.getElementById("btn_search_again").setAttribute("hidden", "hidden");
                     document.getElementById("final_result_div").setAttribute("hidden", "hidden");
                     document.getElementById("viewer41").innerHTML = "";
-                    document.getElementById("comment_div2").innerHTML = "";
-                    document.getElementById("comment_div3").innerHTML = "";
                     document.getElementById("status_info2").innerText = "";
                     document.getElementById("status_div2").innerText = "";
                     progressBar.style.width = "0%";
@@ -1046,6 +979,17 @@
                 document.getElementById('infoclosePopup').addEventListener('click', function() {
                     document.getElementById('infopopup').style.display = 'none';
                     document.getElementById('infooverlay').style.display = 'none';
+                });
+                // case-level prediction
+                document.getElementById('showPopup_prediction').addEventListener('click', function(event) {
+                    event.preventDefault(); // Prevent the default link behavior
+                    document.getElementById('predictionpopup').style.display = 'block';
+                    document.getElementById('predictionoverlay').style.display = 'block';
+                });
+
+                document.getElementById('predictionclosePopup').addEventListener('click', function() {
+                    document.getElementById('predictionpopup').style.display = 'none';
+                    document.getElementById('predictionoverlay').style.display = 'none';
                 });
             </script>
 

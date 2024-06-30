@@ -7,7 +7,6 @@
     <link rel="stylesheet" href="static/css/Base.css">
     <link rel="stylesheet" href="static/css/Common.css">
     <link rel="stylesheet" href="mycss.css">
-    <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.3/themes/base/jquery-ui.css">
 </head>
 
 <body>
@@ -98,7 +97,6 @@
             <script type="text/javascript"
                 src="/recogito-client-plugins/plugins/annotorious-shape-labels/dist/annotorious-shape-labels.min.js"></script>
             <script src="/mycolors.js?ver=1234" type="text/javascript"></script>
-            <script src="https://code.jquery.com/ui/1.13.3/jquery-ui.js"></script>
 
             <h1 style="color:#002fff; text-align: center;">Gene-to-Image Retrieval for Spatial Transcriptomics
                 Data</h1>
@@ -211,9 +209,11 @@
                         <a href="" id="cluster_data1">Cluster data</a>
                         <a href="" id="cluster_analysis_data1">Result1</a>
                         <a href="" id="cluster_analysis_data21">Result2</a>
-                        <label for="gene_names1">Gene names: </label><input type="text" id="gene_names1" value="CD8A">
-                        <button id="btn_show_gene_maps1">Show gene heatmap</button>
+                        <div hidden>
+                        <label for="gene_names1">Gene names: </label><input type="text" id="gene_names1" value="CD8A" hidden>
+                        <button id="btn_show_gene_maps1" hidden>Show gene heatmap</button>
                         <button id="btn_show_gene_maps2" hidden>Show Gene Maps2</button>
+                        </div>
                     </div>
                 </div>
                 <table style="width:100%">
@@ -248,13 +248,6 @@
                         </td>
                     </tr>
                 </table>
-                Comment:
-                <div id="comment_div2" style="background-color: #8CC84B"></div>
-                <div hidden>
-                    <br />
-                    Comment (generated):
-                    <div id="comment_div3" style="background-color: #ffffcc"></div>
-                </div>
                 <div id="status_info2"></div>
             </div>
 
@@ -264,6 +257,15 @@
                     var c = parseInt(annotation.id.split('-')[1]);
                     return {
                         'style': `stroke-width:2; stroke: ${CSS_COLOR_NAMES[c]}`
+                    }
+                }
+                var formatter2 = function (annotation) {
+                    let idstr = annotation.id;
+                    let strLength = idstr.length;
+                    let lastSixChars = idstr.substring(strLength - 6, strLength);
+                    let c = '#' + lastSixChars;
+                    return {
+                        'style': `fill: ${c}; opacity: 0.7; fill-opacity: 0.7;`
                     }
                 }
                 var allTextLines = null;
@@ -280,6 +282,7 @@
                     viewer11.close();
                     viewer21.close();
                     anno11.clearAnnotations();
+                    anno21.clearAnnotations();
                 }
 
                 function load_group_cluster_fractions(results_path, cluster_label) {
@@ -311,6 +314,53 @@
                     xhttp.send();
                 }
 
+                function load_annos_(content, obj) {
+                    allTextLines = content.split(/\r\n|\n/);
+                    var annos = [];
+                    for (let j = 0; j < allTextLines.length - 1; j++) {
+                        const splits = allTextLines[j].split(',');
+                        let c = '#' + splits[4];
+                        annos.push({
+                            "@context": "http://www.w3.org/ns/anno.jsonld",
+                            "id": splits[0],
+                            "type": "Annotation",
+                            "body": [],
+                            "target": {
+                                "selector": [{
+                                "type": "SvgSelector",
+                                "value": `<svg><circle opacity="0.3" cx="${splits[1]}" cy="${splits[2]}" r="${splits[3]}" style="fill: ${c}" /></svg>`
+                                }]
+                            }
+                        })
+                    }
+                    obj.setAnnotations(annos);
+                }
+                function load_annos_2(content, obj) {
+                    allTextLines = content.split(/\r\n|\n/);
+                    var annos = [];
+                    for (let j = 0; j < allTextLines.length - 1; j++) {
+                        const splits = allTextLines[j].split(',');
+                        let xc = parseInt(splits[1]);
+                        let yc = parseInt(splits[2]);
+                        let r = parseInt(splits[3]);
+                        let c = '#' + splits[4];
+                        annos.push({
+                            "@context": "http://www.w3.org/ns/anno.jsonld",
+                            "id": splits[0]+splits[4],
+                            "type": "Annotation",
+                            "body": [],
+                            "target": {
+                                "source": "http://localhost:3000/",
+                                "selector": {
+                                    "type": "FragmentSelector",
+                                    "conformsTo": "http://www.w3.org/TR/media-frags/",
+                                    "value": `xywh=pixel:${xc-r},${yc-r},${r*2},${r*2}`
+                                }
+                            }
+                        })
+                    }
+                    obj.setAnnotations(annos);
+                }
                 function load_fractions_per_case(results_path, cluster_label) {
                     cluster_fractions_per_case = {};
                     var filename = `${results_path}/cluster_counts_per_case.csv`;
@@ -347,6 +397,9 @@
                 var viewer1, viewer2, viewer3;
                 var viewer11, viewer21, viewer31;
                 var anno1, anno11;
+                var overlay11, overlay21;
+                let the_first_x = -1;
+                let the_first_y = -1;
 
                 function load_viewers() {
                     
@@ -357,8 +410,10 @@
                     });
                     anno11 = OpenSeadragon.Annotorious(viewer11, {
                         locale: 'auto',
+                        disableEditor: true,
                         drawOnSingleClick: false,
                         allowEmpty: false,
+                        disableSelect: true,
                         formatter: formatter
                     });
 
@@ -369,6 +424,14 @@
                         showNavigator: true,
                     });
                     viewer21.setVisible(false);
+                    anno21 = OpenSeadragon.Annotorious(viewer21, {
+                        locale: 'auto',
+                        disableEditor: true,
+                        drawOnSingleClick: false,
+                        allowEmpty: false,
+                        disableSelect: true,
+                        formatter: formatter2
+                    });
 
                     var viewer11Leading = false;
                     var viewer21Leading = false;
@@ -430,7 +493,7 @@
                     }
                 }
 
-                function add_items_to_list(items, image_viewer, heatmap_viewer, anno_viewer, table_viewer, hidden_div_id, comment_div_id, comment_div_id2) {
+                function add_items_to_list(items) {
                     all_items = items;
                     var container = document.getElementById("search_results_div");
                     container.style.cssText = 'width: 100%; height: 160px; overflow: scroll; text-align: center; vertical-align: middle;';
@@ -461,7 +524,7 @@
                     var status_e = document.getElementById("status_div");
                     status_e.removeAttribute("hidden");
                     document.getElementById("progress_text").innerText = `Please wait, generating gene vst heatmap for ${gene_names} on ${slide_name} ongoing ...`;
-                    progressBar.style.width = "0%";
+                    progressBar.style.width = "50%";
 
                     var trs = document.getElementById("sr_table").getElementsByTagName("tr");
                     for (let ii = 0; ii < trs.length; ++ii) {
@@ -476,7 +539,7 @@
                     $.ajax({
                         async: true,
                         timeout: 59000,
-                        url: `/get_gene_map_zip_celery`,
+                        url: `/get_gene_map`,
                         type: 'POST',
                         crossDomain: true,
                         processData: false,
@@ -484,30 +547,7 @@
                         dataType: 'json',
                         data: JSON.stringify(params_dict1),
                         success: async function (resultdata, status, request) {
-                            status_url = request.getResponseHeader('Location');
-                            update_progress(status_url);
-                        },
-                        retryCount: 0,
-                        retryLimit: 100,
-                        retryTimeout: 30000000,
-                        created: Date.now(),
-                        error: function (xhr, textStatus, errorThrown) {
-                            this.retryCount++;
-                            if (this.retryCount <= this.retryLimit && Date.now() - this.created < this.retryTimeout) {
-                                $.ajax(this);
-                                return;
-                            }
-                        }
-                    });
-
-                    function update_progress(status_url) {
-                        // send GET request to status URL
-                        $.getJSON(status_url, function (resultdata) {
-                            // update UI
-                            percent = parseInt(resultdata['current'] * 100 / resultdata['total']);
-                            progressBar.style.width = percent + "%";
-                            if (resultdata['state'] != 'PENDING' && resultdata['state'] != 'PROGRESS') {
-                                if ('result' in resultdata) {
+                            if ('result' in resultdata) {
                                     // show result
                                     response = resultdata['result'];
                                     let gene_dict = response;
@@ -530,8 +570,10 @@
                                             }
                                             select_elem.onchange = function (event) {
                                                 let value = event.target.value;
-                                                viewer21.open(response['results'][value]);
-                                                viewer21.viewport.goHome();
+                                                //viewer21.open(response['results'][value]);
+                                                //viewer21.viewport.goHome();
+                                                anno21.clearAnnotations();
+                                                load_annos_2(response['results'][value], anno21);
                                             };
                                             let label_elem = document.createElement("label");
                                             label_elem.setAttribute('for', 'validgenes');
@@ -566,20 +608,20 @@
                                         this.retryCount++;
                                     }
                                 }
-                                else {
-                                    // something unexpected happened
-                                }
+                        },
+                        retryCount: 0,
+                        retryLimit: 100,
+                        retryTimeout: 30000000,
+                        created: Date.now(),
+                        error: function (xhr, textStatus, errorThrown) {
+                            this.retryCount++;
+                            if (this.retryCount <= this.retryLimit && Date.now() - this.created < this.retryTimeout) {
+                                $.ajax(this);
+                                return;
                             }
-                            else {
-                                // rerun in 2 seconds
-                                setTimeout(function () {
-                                    update_progress(status_url);
-                                }, 2000);
-                            }
-                        });
-                    }
+                        }
+                    });
                 };
-
 
                 function set_for_gene_data(results_path, slide_name, gene_data_div_id, gene_data_a_id, cluster_data_a_id, btn_down_cluster_analysis_id, btn_down_cluster_analysis_id2,
                     btn_gene_map_id, btn_gene_map_id2, genenamesid) {
@@ -610,7 +652,7 @@
                             $.ajax({
                                 async: true,
                                 timeout: 59000,
-                                url: `/get_gene_map_zip_celery`,
+                                url: `/get_gene_map`,
                                 type: 'POST',
                                 crossDomain: true,
                                 processData: false,
@@ -618,28 +660,7 @@
                                 dataType: 'json',
                                 data: JSON.stringify(params_dict1),
                                 success: async function (resultdata, status, request) {
-                                    status_url = request.getResponseHeader('Location');
-                                    update_progress(status_url);
-                                },
-                                retryCount: 0,
-                                retryLimit: 100,
-                                retryTimeout: 30000000,
-                                created: Date.now(),
-                                error: function (xhr, textStatus, errorThrown) {
-                                    this.retryCount++;
-                                    if (this.retryCount <= this.retryLimit && Date.now() - this.created < this.retryTimeout) {
-                                        $.ajax(this);
-                                        return;
-                                    }
-                                }
-                            });
-
-                            function update_progress(status_url) {
-                                $.getJSON(status_url, function (resultdata) {
-                                    percent = parseInt(resultdata['current'] * 100 / resultdata['total']);
-                                    progressBar.style.width = percent + "%";
-                                    if (resultdata['state'] != 'PENDING' && resultdata['state'] != 'PROGRESS') {
-                                        if ('result' in resultdata) {
+                                    if ('result' in resultdata) {
                                             // show result
                                             response = resultdata['result'];
                                             let gene_dict = response;
@@ -685,17 +706,19 @@
                                                 this.retryCount++;
                                             }
                                         }
-                                        else {
-                                        }
+                                },
+                                retryCount: 0,
+                                retryLimit: 100,
+                                retryTimeout: 30000000,
+                                created: Date.now(),
+                                error: function (xhr, textStatus, errorThrown) {
+                                    this.retryCount++;
+                                    if (this.retryCount <= this.retryLimit && Date.now() - this.created < this.retryTimeout) {
+                                        $.ajax(this);
+                                        return;
                                     }
-                                    else {
-                                        // rerun in 2 seconds
-                                        setTimeout(function () {
-                                            update_progress(status_url);
-                                        }, 2000);
-                                    }
-                                });
-                            }
+                                }
+                            });
                         };
 
                         let btn2 = document.getElementById(btn_gene_map_id2);
@@ -841,6 +864,11 @@
                                         let x0 = xxs[k];
                                         let y0 = yys[k];
                                         coords_str += `${x0},${y0},`;
+                                        if (the_first_x < 0) {
+                                            the_first_x = parseInt(xs[k]);
+                                            the_first_y = parseInt(ys[k]);
+                                        }
+
                                         img1.addEventListener("click", (event) => {
                                             let viewport_coord = viewer.viewport.imageToViewportCoordinates(parseInt(xs[k]), parseInt(ys[k]));
                                             viewer.viewport.panTo(viewport_coord);
@@ -857,21 +885,7 @@
                                             let dblclick_type_e = document.getElementById("dblclick_type");
                                             let dblclick_type = dblclick_type_e.options[dblclick_type_e.selectedIndex].value;
                                             if (dblclick_type === "image") {
-                                                const project_type = "ST";
-                                                const search_feature = "before_attention";
-                                                const search_method = "faiss_IndexFlatIP";
-                                                const search_project = "ST";
-                                                const search_knnk = 100;
-                                                const img_url = img1.src;
-                                                var imagesearch_window = window.open(`/image_retrieval1?project_name=${project_type}&imgsrc=${img_url}&slide_name=${slide_name}&x=${x0}&y=${y0}&k=${search_knnk}&search_feature=${search_feature}&search_project=${search_project}&search_method=${search_method}`);
-                                                if (imagesearch_window !== null) {
-                                                    imagesearch_window.postMessage({
-                                                        "img_url": img1.src,
-                                                        "project_name": project_type,
-                                                        "coordx": x0,
-                                                        "coordy": y0
-                                                    }, "*");
-                                                }
+                                                console.log('removed');
                                             } else {
                                                 var params_dict1 = {
                                                     "project_name": project_name,
@@ -953,12 +967,12 @@
                                         const a1 = document.createElement('button');
                                         a1.innerText = 'Download genes';
                                         a1.addEventListener("click", (event) => {
-                                            var params_dict1 = [{ 'project_name': project_name, 'slide_name': slide_name, 'coords': coords_str }];
+                                            var params_dict1 = [{ 'project_name': project_name, 'slide_name': slide_name, 'coords': coords_str, 'gene_names': document.getElementById("gene_names").value}];
 
                                             a1.innerText = 'Downloading ...';
                                             a1.setAttribute("disabled", "disabled");
                                             $.ajax({
-                                                url: `/download_gene`,
+                                                url: `/download_gene2`,
                                                 type: 'POST',
                                                 crossDomain: true,
                                                 processData: false,
@@ -966,15 +980,16 @@
                                                 dataType: 'json',
                                                 data: JSON.stringify(params_dict1),
                                                 success: async function (response) {
-                                                    const blob = new Blob([response['gene_csv']], { type: 'text/csv' });
-                                                    const url = window.URL.createObjectURL(blob);
-                                                    const a = document.createElement('a');
-                                                    a.style = "display:none";
-                                                    a.setAttribute('href', url);
-                                                    a.setAttribute('download', `${project_name}_${slide_name}_searched_spots_gene_count.csv`);
-                                                    a.click();
+                                                    if (response['filepath'] === '') {
+                                                        alert('error');
+                                                    } else {
+                                                        const a = document.createElement('a');
+                                                        a.style = "display:none";
+                                                        a.setAttribute('href', response['filepath']);
+                                                        a.click();
+                                                    }
                                                     a1.removeAttribute("disabled");
-                                                    a1.innerText = 'Download gene counts';
+                                                    a1.innerText = 'Download genes';
                                                 },
                                                 error: function (error) {
                                                 }
@@ -999,6 +1014,8 @@
 
                 var current_ind = -1;
                 function show_item(buttonobj,ind) {
+                    the_first_x = -1;
+                    the_first_y = -1;
                     buttonobj.setAttribute("disabled", "disabled");
                     document.getElementById("search_results_div").setAttribute("disabled", "disabled");
 
@@ -1019,10 +1036,7 @@
                     let cluster_label = parseInt(all_items['cluster_label'][ind]);
                     let gene_symbol = all_items['gene_symbol'][ind];
                     let note = all_items['note'][ind];
-                    let note_generated = all_items['note_generated'][ind];
                     document.getElementById("gene_names1").value = gene_symbol;
-                    document.getElementById("comment_div2").innerText = note;
-                    document.getElementById("comment_div3").innerText = note_generated;
                     let results_path = `data_HiDARE_PLIP_20240208/20240202v4_ST/PanCancer2GPUsFP/shared_attention_imagenetPLIP/split1_e95_h224_density_vis/feat_before_attention_feat/test/analysis/one_patient_top_128/${cluster_setting}/${slide2_name}`;
 
                     load_group_cluster_fractions(results_path, cluster_label);
@@ -1033,13 +1047,16 @@
                     viewer21.setVisible(false);
                     viewer11.open(`${results_path}/../../../../../../../../../big_images/${slide2_name}_big_orig.dzi`);
                     viewer11.viewport.goHome();
+                    viewer21.open(`${results_path}/../../../../../../../../../big_images/${slide2_name}_big_orig.dzi`);
+                    viewer21.viewport.goHome();
                     anno11.clearAnnotations();
+                    anno21.clearAnnotations();
                     document.getElementById("atten_or_gene").innerText = "gene vst heatmap";
 
                     set_for_gene_data(results_path, slide2_name, "gene_data_div1", "gene_data1", "cluster_data1", "cluster_analysis_data1", "cluster_analysis_data21",
                         "btn_show_gene_maps1", "btn_show_gene_maps2", "gene_names1");
 
-                    anno11.clearAnnotations();
+                    anno11.clearAnnotations(); 
                     let dblclick_type_e = document.getElementById("cbx_show_patches");
                     let dblclick_type = dblclick_type_e.options[dblclick_type_e.selectedIndex].value;
                     if (dblclick_type === "all_class_annos") {
@@ -1056,6 +1073,10 @@
 
                     current_ind = ind;
                     
+                    // if (the_first_x > 0) {
+                    //     let viewport_coord = viewer11.viewport.imageToViewportCoordinates(the_first_x, the_first_y);
+                    //     viewer11.viewport.panTo(viewport_coord);
+                    // }
                 }
 
                 document.getElementById("cbx_show_patches").onchange = function () {
@@ -1083,16 +1104,12 @@
                     anno11.clearAnnotations();
                     removeAllChildNodes(document.getElementById("viewer41"));
                     document.getElementById("viewer41").innerHTML = "";
-                    removeAllChildNodes(document.getElementById("comment_div2"));
-                    document.getElementById("comment_div2").innerHTML = "";
-                    removeAllChildNodes(document.getElementById("comment_div3"));
-                    document.getElementById("comment_div3").innerHTML = "";
                     removeAllChildNodes(document.getElementById("status_info2"));
                     document.getElementById("status_info2").innerText = "";
                     removeAllChildNodes(document.getElementById("search_results_div"));
                     document.getElementById("search_results_div").innerHTML = "";
                     document.getElementById("search_results_div").style.cssText = "";
-                    progressBar.style.width = "0%";
+                    progressBar.style.width = "50%";
 
                     var status_e = document.getElementById("status_div");
                     var btn_search_e = document.getElementById("btn_search");
@@ -1104,7 +1121,7 @@
                     btn_search_e.setAttribute("disabled", "disabled");
                     $.ajax({
                         timeout: 300000,
-                        url: `/gene_search_v2_celery`,
+                        url: `/gene_search`,
                         type: 'POST',
                         crossDomain: true,
                         processData: false,
@@ -1112,30 +1129,14 @@
                         dataType: 'json',
                         data: JSON.stringify(params_dict1),
                         success: function (resultdata, status, request) {
-                            status_url = request.getResponseHeader('Location');
-                            update_progress(status_url);
-                        },
-                        error: function (error) {
-                            alert('input error or server error!')
-                        }
-                    });
-
-                    function update_progress(status_url) {
-                        // send GET request to status URL
-                        $.getJSON(status_url, function (resultdata) {
-                            // update UI
-                            percent = parseInt(resultdata['current'] * 100 / resultdata['total']);
-                            progressBar.style.width = percent + "%";
-                            document.getElementById("progress_text").innerText += '\n' + resultdata['status'];
-                            if (resultdata['state'] != 'PENDING' && resultdata['state'] != 'PROGRESS') {
-                                if ('result' in resultdata) {
+                            if ('result' in resultdata) {
                                     // show result
                                     response = resultdata['result'];
                                     if (response['response'] === '') {
                                         alert('Not found these genes. Please check the inputs.');
                                     } else {
 
-                                        add_items_to_list(JSON.parse(response['response']), viewer11, viewer21, anno11, 'viewer41', 'status_div2', 'comment_div2', 'comment_div3');
+                                        add_items_to_list(JSON.parse(response['response']));
 
                                         if (Object.keys(response['coxph_html_dict']).length > 0) { 
 
@@ -1198,15 +1199,11 @@
                                     status_e.setAttribute("hidden", "hidden");
                                     btn_search_e.removeAttribute("disabled"); 
                                 }
-                            }
-                            else {
-                                // rerun in 2 seconds
-                                setTimeout(function () {
-                                    update_progress(status_url);
-                                }, 2000);
-                            }
-                        });
-                    }
+                        },
+                        error: function (error) {
+                            alert('input error or server error!')
+                        }
+                    });
                 }
                 load_viewers();
 
