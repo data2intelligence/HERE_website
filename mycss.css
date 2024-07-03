@@ -116,6 +116,67 @@
     margin-left: calc(100% - 100px); /* Adjust margin to position correctly */
 }
 
+
+
+
+/* Style for the pop-up div */
+.predictionpopup {
+    display: none; /* Initially hidden */
+    position: fixed; /* Stay in place */
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 50%;
+    height: 400px;
+    overflow-y: auto;
+    padding: 20px;
+    background-color: white;
+    border: 1px solid black;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    z-index: 1000; /* Ensure it's above other content */
+}
+
+/* Background overlay */
+.predictionoverlay {
+    display: none; /* Initially hidden */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999; /* Ensure it's below the pop-up but above other content */
+}
+.predictionclose-btn_bak {
+    background-color: red;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    cursor: pointer;
+    float: right;
+}
+.predictionclose-btn {
+    position: sticky; /* Stick the button inside the scrollable div */
+    top: 10px; /* Adjust the top position as needed */
+    right: 10px; /* Adjust the right position as needed */
+    background-color: #007bff; /* Optional: add background color */
+    color: white; /* Optional: add text color */
+    border: none; /* Optional: remove border */
+    padding: 10px 20px; /* Optional: add padding */
+    cursor: pointer; /* Optional: change cursor to pointer */
+    margin-left: calc(100% - 100px); /* Adjust margin to position correctly */
+}
+.abutton {
+    font: bold 12px Arial;
+    text-decoration: none;
+    background-color: #EEEEEE;
+    color: #333333;
+    padding: 2px 6px 2px 6px;
+    border-top: 1px solid #CCCCCC;
+    border-right: 1px solid #333333;
+    border-bottom: 1px solid #333333;
+    border-left: 1px solid #CCCCCC;
+  }
 .dictionary-table {
 width: 100%; /* Make the table full width */
 border-collapse: collapse; /* Collapse borders */

@@ -127,13 +127,8 @@ def knn_search_images_by_faiss(query_embedding, k=10, search_project="ALL", sear
     if search_project == 'ALL':
         Ds, Is = {}, {}
         for iiiii, project_name in enumerate(project_names):
-            if search_method == 'faiss_IndexFlatIP':
-                Di, Ii = faiss_indexes['faiss_IndexFlatIP'][project_name].search(
-                    query_embedding, k)
-            else: # 'HNSW' in search_method:
-                Di, Ii = faiss_indexes[search_method][project_name].search(
-                    query_embedding, k)
-            Ii_filtered = [ii for ii in Ii[0] if ii>=0]
+            Di, Ii = faiss_indexes[search_method][project_name].search(
+                query_embedding, k)
             Di = np.array([dd for dd, ii in zip(Di[0], Ii[0]) if ii>=0])
             beginid = project_start_ids[project_name]
             Ii = [beginid+ii for ii in Ii[0] if ii>=0]
@@ -156,7 +151,6 @@ def knn_search_images_by_faiss(query_embedding, k=10, search_project="ALL", sear
             Di, Ii = faiss_indexes[search_method][search_project].search(
                 query_embedding, k)
 
-        Ii_filtered = [ii for ii in Ii[0] if ii>=0]
         Di = np.array([dd for dd, ii in zip(Di[0], Ii[0]) if ii>=0])
         beginid = project_start_ids[search_project]
         Ii = np.array([beginid+ii for ii in Ii[0] if ii>=0])
@@ -308,7 +302,6 @@ def gene_search():
             sql = f'select a.*, b.symbol, d.cluster_setting, e.prefix, c.cluster_label, c.cluster_info, f.note from {hidare_table_str} '\
                 'where a.gene_id = b.id and c.id = a.c_id and c.cs_id = d.id and '\
                     'c.st_id = e.id order by a.cohensd desc limit 100;'
-            print('sql1', sql, gene_names, cohensd_thres)
             try:
                 db_cursor.execute(sql)
             except:
@@ -319,7 +312,6 @@ def gene_search():
             sql = f'select a.*, b.symbol, d.cluster_setting, e.prefix, c.cluster_label, c.cluster_info from {hidare_table_str} '\
                 'where a.cohensd > %s and a.gene_id = b.id and c.id = a.c_id and c.cs_id = d.id '\
                     'and c.st_id = e.id order by a.cohensd desc limit 100;'
-            print('sql2', sql, gene_names, cohensd_thres)
             try:
                 db_cursor.execute(sql, (cohensd_thres,))
             except:
@@ -331,7 +323,6 @@ def gene_search():
             sql = f'select a.*, b.symbol, d.cluster_setting, e.prefix, c.cluster_label, c.cluster_info from {hidare_table_str} '\
                 'where b.symbol in %s and a.gene_id = b.id and c.id = a.c_id and c.cs_id = d.id '\
                     'and c.st_id = e.id order by a.cohensd desc limit 100;'
-            print('sql3', sql, gene_names, cohensd_thres)
             try:
                 db_cursor.execute(sql, (gene_names,))
             except:
@@ -341,7 +332,6 @@ def gene_search():
             sql = f'select a.*, b.symbol, d.cluster_setting, e.prefix, c.cluster_label, c.cluster_info from {hidare_table_str} '\
                 'where b.symbol in %s and a.cohensd > %s and a.gene_id = b.id and c.id = a.c_id and '\
                     'c.cs_id = d.id and c.st_id = e.id order by a.cohensd desc limit 100;'
-            print('sql4', sql, gene_names, cohensd_thres)
             try:
                 db_cursor.execute(sql, (gene_names, cohensd_thres))
             except:
@@ -597,23 +587,20 @@ def image_search():
     random1000_mean, random1000_std, random1000_dists = compute_mean_std_cosine_similarity_from_random1000(
         query_embedding, search_project=search_project)
     final_response = {}
-    iinds = np.argsort(I)
-    D = D[iinds].tolist()
-    I = I[iinds].tolist()
+    # iinds = np.argsort(I)
+    # D = D[iinds].tolist()
+    # I = I[iinds].tolist()
     db_conn, db_cursor = get_db()
-    
-    hidare_table_str = f'faiss_table_20240619 as a, image_table_20240628 as b'
+
+    sql = f'select a.*, b.scale, b.patch_size_vis_level, b.svs_prefix, b.note from '\
+        'faiss_table_20240628 as a, image_table_20240628 as b where '\
+            'a.rowid in %s and a.svs_prefix_id = b.svs_prefix_id and '\
+                'a.project_id = b.project_id'
     try:
-        db_cursor.execute(
-            'select a.*, b.scale, b.patch_size_vis_level, b.svs_prefix, b.note from {} where '\
-                'a.rowid in ({}) and a.svs_prefix_id = b.svs_prefix_id and '\
-                    'a.project_id = b.project_id'.format(hidare_table_str, ', '.join([str(ind + 1) for ind in I])))
+        db_cursor.execute(sql, ([ind + 1 for ind in I],))
     except:
         db_conn, db_cursor = get_db()
-        db_cursor.execute(
-            'select a.*, b.scale, b.patch_size_vis_level, b.svs_prefix, b.note from {} where '\
-                'a.rowid in ({}) and a.svs_prefix_id = b.svs_prefix_id and '\
-                    'a.project_id = b.project_id'.format(hidare_table_str, ', '.join([str(ind + 1) for ind in I])))
+        db_cursor.execute(sql, ([ind + 1 for ind in I],))
 
     res = db_cursor.fetchall()
     db_conn.close()
@@ -637,7 +624,8 @@ def image_search():
                 '_pvalue': len(np.where(random1000_dists >= score)[0]) / len(random1000_dists)}
         project_name = project_names[proj_id]
         x0, y0 = int(x), int(y)
-        image_id = '{}_{}_x{}_y{}'.format(project_name, slide_name, x, y)
+        # image_id = '{}_{}_x{}_y{}'.format(project_name, slide_name, x, y)
+        image_id = '{}_{}_x{:d}_y{:d}'.format(proj_id, svs_prefix_id, x, y)
         image_name = '{}_x{}_y{}'.format(slide_name, x, y)
 
         if 'ST' in project_name:
