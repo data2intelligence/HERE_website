@@ -135,7 +135,7 @@
                     <div id="divcontainer1Left">
                         <div>
                         <label for="file">1. Choose one or more images (jpeg/png/bmp):</label>
-                        <input type="file" id="file" accept="image/png, image/jpeg, image/bmp" onchange="readURL(this);" onclick="file_click_function(this);" multiple />
+                        <input type="file" id="file" accept="image/png, image/jpeg, image/bmp" onchange="readURL(this);" multiple />
                         <div>or click an example image: 
                             <a href="#" onclick="javascript:load_example_img(0);">1</a>,&nbsp;
                             <a href="#" onclick="javascript:load_example_img(1);">2</a>,&nbsp;
@@ -267,6 +267,7 @@
                 let example_imgs = ['vessel-0_r2.png','1035511-1_r2.png','1032440-1.1_r2.png'];
                 var example_image = null;
                 function load_example_img(ii) {
+                    document.getElementById('file').value = '';
                     query_img_shown_urls = {};
                     const container11 = document.getElementById('divcontainer1');
                     const right_div = document.getElementById("query_images_div");
@@ -338,6 +339,18 @@
                 }
 
                 function readURL(input) {
+
+                    query_img_shown_urls = {};
+                    example_image = null;
+                    document.getElementById("final_result_div").setAttribute("hidden", "hidden");
+                    document.getElementById("btn_search_again").setAttribute("hidden", "hidden");
+
+                    document.getElementById("viewer41").innerHTML = "";
+                    document.getElementById("status_info2").innerText = "";
+                    document.getElementById("status_div2").innerText = "";
+                    progressBar.style.width = "0%";
+                    params_dict['resize'] = 0;
+
                     const container11 = document.getElementById('divcontainer1');
                     const right_div = document.getElementById("query_images_div");
                     if (right_div) {
@@ -869,6 +882,8 @@
 
                         const count = files.length;
                         if (count > 0) {
+                            example_image = null;
+
                             params_dict['img_urls'] = [];
                             params_dict['filenames'] = [];
 

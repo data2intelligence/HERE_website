@@ -52,16 +52,130 @@ feature_extractor = None
 config = None
 transform = None
 state_dict = None
+state_dict_ProvGigaPath = None
+state_dict_CONCH = None
 
-attention_model = AttentionModel()
-feature_extractor = CLIPModel.from_pretrained('vinid/plip')
-image_processor = CLIPProcessor.from_pretrained('vinid/plip')
+feature_extractor = CLIPModel.from_pretrained(f"{DATA_DIR}/assets/vinid_plip")
+image_processor = CLIPProcessor.from_pretrained(f"{DATA_DIR}/assets/vinid_plip")
 feature_extractor = feature_extractor.eval()
 
 # encoder + attention except final
+attention_model = AttentionModel()
 state_dict = torch.load(f"{DATA_DIR}/assets/snapshot_95.pt", map_location='cpu')
+# state_dict = torch.load(f"{DATA_DIR}/assets/snapshot_66_HERE_PLIP.pt", map_location='cpu')
 attention_model.load_state_dict(state_dict['MODEL_STATE'], strict=False)
-attention_model = attention_model.eval()
+attention_model.eval()
+
+attention_model_ProvGigaPath = AttentionModel(backbone='ProvGigaPath')
+state_dict_ProvGigaPath = torch.load(f"{DATA_DIR}/assets/snapshot_39_HERE_ProvGigaPath.pt", map_location='cpu')
+attention_model_ProvGigaPath.load_state_dict(state_dict_ProvGigaPath['MODEL_STATE'], strict=False)
+attention_model_ProvGigaPath.eval()
+
+attention_model_CONCH = AttentionModel(backbone='CONCH')
+state_dict_CONCH = torch.load(f"{DATA_DIR}/assets/snapshot_53_HERE_CONCH.pt", map_location='cpu')
+attention_model_CONCH.load_state_dict(state_dict_CONCH['MODEL_STATE'], strict=False)
+attention_model_CONCH.eval()
+
+def load_cfg_from_json(json_file):
+    with open(json_file, "r", encoding="utf-8") as reader:
+        text = reader.read()
+    return json.loads(text)
+
+def load_model_config_from_hf(model_id: str):
+    cached_file = f'{DATA_DIR}/assets/ProvGigaPath/config.json'
+
+    hf_config = load_cfg_from_json(cached_file)
+    if 'pretrained_cfg' not in hf_config:
+        # old form, pull pretrain_cfg out of the base dict
+        pretrained_cfg = hf_config
+        hf_config = {}
+        hf_config['architecture'] = pretrained_cfg.pop('architecture')
+        hf_config['num_features'] = pretrained_cfg.pop('num_features', None)
+        if 'labels' in pretrained_cfg:  # deprecated name for 'label_names'
+            pretrained_cfg['label_names'] = pretrained_cfg.pop('labels')
+        hf_config['pretrained_cfg'] = pretrained_cfg
+
+    # NOTE currently discarding parent config as only arch name and pretrained_cfg used in timm right now
+    pretrained_cfg = hf_config['pretrained_cfg']
+    pretrained_cfg['hf_hub_id'] = model_id  # insert hf_hub id for pretrained weight load during model creation
+    pretrained_cfg['source'] = 'hf-hub'
+
+    # model should be created with base config num_classes if its exist
+    if 'num_classes' in hf_config:
+        pretrained_cfg['num_classes'] = hf_config['num_classes']
+
+    # label meta-data in base config overrides saved pretrained_cfg on load
+    if 'label_names' in hf_config:
+        pretrained_cfg['label_names'] = hf_config.pop('label_names')
+    if 'label_descriptions' in hf_config:
+        pretrained_cfg['label_descriptions'] = hf_config.pop('label_descriptions')
+
+    model_args = hf_config.get('model_args', {})
+    model_name = hf_config['architecture']
+    return pretrained_cfg, model_name, model_args
+
+from timm.layers import set_layer_config
+from timm.models import is_model, model_entrypoint, load_checkpoint
+
+def split_model_name_tag(model_name: str, no_tag: str = ''):
+    model_name, *tag_list = model_name.split('.', 1)
+    tag = tag_list[0] if tag_list else no_tag
+    return model_name, tag
+
+from urllib.parse import urlsplit
+
+def parse_model_name(model_name: str):
+    if model_name.startswith('hf_hub'):
+        # NOTE for backwards compat, deprecate hf_hub use
+        model_name = model_name.replace('hf_hub', 'hf-hub')
+    parsed = urlsplit(model_name)
+    assert parsed.scheme in ('', 'timm', 'hf-hub')
+    if parsed.scheme == 'hf-hub':
+        # FIXME may use fragment as revision, currently `@` in URI path
+        return parsed.scheme, parsed.path
+    else:
+        model_name = os.path.split(parsed.path)[-1]
+        return 'timm', model_name
+
+
+def create_model():
+    model_name = 'hf_hub:prov-gigapath/prov-gigapath'
+    model_source, model_name = parse_model_name(model_name)
+    pretrained_cfg, model_name, model_args = load_model_config_from_hf(model_name)
+    kwargs = {}
+    if model_args:
+        for k, v in model_args.items():
+            kwargs.setdefault(k, v)
+    create_fn = model_entrypoint(model_name)
+    with set_layer_config(scriptable=None, exportable=None, no_jit=None):
+        model = create_fn(
+            pretrained=False,
+            pretrained_cfg=pretrained_cfg,
+            pretrained_cfg_overlay=None,
+            **kwargs
+        )
+    load_checkpoint(model, f'{DATA_DIR}/assets/ProvGigaPath/pytorch_model.bin')
+
+    return model
+
+# ProvGigaPath
+ProvGigaPath_model = create_model()  # timm.create_model("hf_hub:prov-gigapath/prov-gigapath", pretrained=True)
+ProvGigaPath_model.eval()
+ProvGigaPath_transform = transforms.Compose(
+    [
+        transforms.Resize(256, interpolation=transforms.InterpolationMode.BICUBIC),
+        transforms.CenterCrop(224),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+    ]
+)
+
+# CONCH
+from conch.open_clip_custom import create_model_from_pretrained
+CONCH_model, CONCH_image_processor = create_model_from_pretrained('conch_ViT-B-16', checkpoint_path=f'{DATA_DIR}/assets/CONCH_weights_pytorch_model.bin')
+CONCH_model.eval()
+
+
 
 faiss_Ms = [32]
 faiss_nlists = [128]
@@ -538,7 +652,7 @@ def get_query_embedding(img_urls, resize=0):
             I1 = ImageDraw.Draw(image_shown_all[ii])
             for jj, score in enumerate(atten_scores_):
                 I1.text(patch_coords_all[ii][jj], "{:.4f}".format(
-                    score), fill=(0, 255, 255), font=font)
+                    score), fill=(0, 255, 254), font=font)
 
             img_byte_arr = io.BytesIO()
             image_shown_all[ii].save(img_byte_arr, format='JPEG')

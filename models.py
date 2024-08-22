@@ -70,10 +70,18 @@ class AttentionModel_bak(nn.Module):
         return self.attention_net(x_path)
 
 
+BACKBONE_DICT = {
+    'CLIP': 512,
+    'PLIP': 512,
+    'MobileNetV3': 1280,
+    'mobilenetv3': 1280,
+    'ProvGigaPath': 1536,
+    'CONCH': 512
+}
 
 # survival not shared, all other shared
 class AttentionModel(nn.Module):
-    def __init__(self):
+    def __init__(self, backbone='PLIP'):
         super().__init__()
 
         self.classification_dict = {
@@ -148,7 +156,7 @@ class AttentionModel(nn.Module):
         ]
 
         self.attention_net = nn.Sequential(*[
-            nn.Linear(512, 256), 
+            nn.Linear(BACKBONE_DICT[backbone], 256), 
             nn.ReLU(), 
             nn.Dropout(0.25),
             Attn_Net_Gated(L=256, D=256, dropout=0.25, n_classes=1)
