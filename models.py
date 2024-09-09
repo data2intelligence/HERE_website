@@ -36,10 +36,6 @@ class Attn_Net_Gated(nn.Module):
         return A, x
 
 
-"""
-/data/zhongz2/results_histo256_generated7fp_hf_TCGA-ALL2_32_2gpus/adam_RegNormNone_Encoderimagenetmobilenetv3_CLSLOSSweighted_ce_accum4_wd1e-4_reguNone1e-4/split_3/snapshot_22.pt
-"""
-
 # survival not shared, all other shared
 class AttentionModel_bak(nn.Module):
     def __init__(self):
@@ -76,7 +72,8 @@ BACKBONE_DICT = {
     'MobileNetV3': 1280,
     'mobilenetv3': 1280,
     'ProvGigaPath': 1536,
-    'CONCH': 512
+    'CONCH': 512,
+    'UNI': 1024
 }
 
 # survival not shared, all other shared

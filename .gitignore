@@ -1,4 +1,7 @@
+deployment_scripts/
 __pycache__/
 *~
 .DS_Store
-*.zip
+rsync.sh
+wsgi.py
+differential_analysis_results/

@@ -108,9 +108,10 @@
             <div id="helppopup" class="helppopup">
                 <div style="text-align: left;padding: 1px;">
                     <button class="helpclose-btn" id="closePopup">Close</button>
-                    1. You can click the patches on the right panel to see the whole slide H&E image. <br />
-                    2. You can download the gene profiles to see the gene expression if using
-                    spatial transcriptomics data.
+                    1. You can scroll the whole-slide image on the left panel to examine the image details. <br/>
+                    2. You can click the patches on the right panel to see the whole slide H&E image. <br />
+                    <!-- 2. You can double click the patches on the right panel to see the gene expression if using
+                    spatial transcriptomics data. -->
                 </div>
             </div>
 
@@ -156,10 +157,17 @@
                         <div>
                         <label for="search_project">3. Select a project for search: </label>
                         <select name="search_project" id="search_project">
-                            <option value="KenData" selected>NCIData</option>
-                            <option value="TCGA-COMBINED">TCGA</option>
+                            <option value="KenData_20240814" selected>NCIData</option>
                             <option value="ST">ST</option>
-                            <option value="ALL">All</option>
+                            <option value="TCGA-COMBINED">TCGA</option>
+                            <option value="ALL">ALL</option>
+                        </select>
+                        <label for="search_backbone">4. backbone: </label>
+                        <select name="search_backbone" id="search_backbone">
+                            <option value="HERE_CONCH" selected>HERE_CONCH</option>
+                            <option value="HERE_UNI">HERE_UNI</option>
+                            <!-- <option value="HERE_ProvGigaPath">HERE_ProvGigaPath</option>
+                            <option value="HERE_PLIP">HERE_PLIP</option> -->
                         </select>
                         </div>
                         <div>
@@ -254,6 +262,8 @@
 
                     add_one_option_to_select(e, "faiss_IndexFlatIP", "faiss_IndexFlatIP", index, false);
                     index += 1;
+                    add_one_option_to_select(e, "faiss_IndexFlatL2", "faiss_IndexFlatL2", index, false);
+                    index += 1;
                 }
 
                 add_search_methods();
@@ -271,8 +281,9 @@
                     query_img_shown_urls = {};
                     const container11 = document.getElementById('divcontainer1');
                     const right_div = document.getElementById("query_images_div");
-                    if (right_div) {
+                    if (right_div) { 
                         right_div.remove();
+                    } else { 
                     }
                     // Create the right div
                     const query_images_div = document.createElement('div');
@@ -453,7 +464,7 @@
                     if (project_name.includes('ST')) {
                         version_date = '20240202v4';
                     }
-                    return `data_HiDARE_PLIP_20240208/${version_date}_${project_name}`;
+                    return `data_HiDARE_PLIP_20240208/${version_date}_${project_name}_v2`;
                 
                 }
 
@@ -518,7 +529,7 @@
                         let max_score = items[slide_name]['max_score'].toFixed(3);
                         let min_zscore = items[slide_name]['min_zscore'].toFixed(3);
                         let max_zscore = items[slide_name]['max_zscore'].toFixed(3);
-                        let zscore_sum = items[slide_name]['zscore_sum'].toFixed(3);
+                        let zscore_sum = parseInt(items[slide_name]['zscore_sum']); //[slide_name]['zscore_sum'].toFixed(3);
                         let random1000_mean = items[slide_name]['_random1000_mean'].toFixed(3);
                         let random1000_std = items[slide_name]['_random1000_std'].toFixed(3);
                         let _time_elapsed_ms = items[slide_name]['_time_elapsed_ms'].toFixed(3);
@@ -564,6 +575,7 @@
                                     show_annotations(project_name, slide_name, anno_viewer, items[slide_name]['annotations']);
                                     hiddendivid.innerText = `${project_name}_${slide_name}`;
                                     document.getElementById("infoContent").innerText = items[slide_name]['note'];
+                                    //document.getElementById("infoContent").innerHTML = items[slide_name]['note'];
                                     commentcontent = items[slide_name]['note'];
                                 }
                                 let viewport_coord = image_viewer.viewport.imageToViewportCoordinates(x, y);
@@ -580,9 +592,15 @@
 
                         document.getElementById(`${table_viewer}_${project_name}_${slide_name}_${i}`).innerHTML = "";
                         var div1 = document.createElement("DIV");
-                        var button_elem = document.createElement("button");
-                        button_elem.style.cssText = "background-color: #1c87c9;border:none;display: inline-block;";
-                        button_elem.innerHTML = slide_name;
+                        var button_elem = document.createElement("DIV");
+                        button_elem.style.cssText = "background-color:beige;border:none;display: inline-block;";
+                        let external_link = items[slide_name]['external_link'];
+                        if (external_link.length === 0) {
+                            button_elem.innerHTML = slide_name;
+                        } else {
+                            button_elem.innerHTML = `<a href="${external_link}" target="_blank">${slide_name}</a>`;
+                        }
+                        
                         div1.appendChild(button_elem);
 
                         if (coords_str.length > 0) {
@@ -623,16 +641,17 @@
 
                         if (table_viewer === "viewer41") {
                             var p1 = document.createElement("div");
-                            var p2 = document.createElement("div");
+                            //var p2 = document.createElement("div");
                             var p3 = document.createElement("div");
                             p1.style.cssText = "background-color: #ADD8E6";
-                            p2.style.cssText = "background-color: #FBCEB1";
+                            //p2.style.cssText = "background-color: #FBCEB1";
                             p3.style.cssText = "background-color: #ABCD12";
                             p1.innerHTML = `distance: ${min_score}, ${max_score}`;
-                            p2.innerHTML = `zscore: ${min_zscore}, ${max_zscore}`;
-                            p3.innerHTML = `zscore_sum: ${zscore_sum}`;
+                            //p2.innerHTML = `zscore: ${min_zscore}, ${max_zscore}`;
+                            //p3.innerHTML = `zscore_sum: ${zscore_sum}`;
+                            p3.innerHTML = `rank_sum: ${zscore_sum}`;
                             div1.appendChild(p1);
-                            div1.appendChild(p2);
+                            //div1.appendChild(p2);
                             div1.appendChild(p3);
                         }
                         document.getElementById(`${table_viewer}_${project_name}_${slide_name}_${i}`).appendChild(div1);
@@ -684,7 +703,7 @@
                     urlparams["search_feature"] = "before_attention";
                 }
                 if (!("search_project" in urlparams)) {
-                    urlparams["search_project"] = 'KenData';
+                    urlparams["search_project"] = 'KenData_20240814';
                 }
                 if (!("search_method" in urlparams)) {
                     urlparams["search_method"] = "faiss_IndexHNSWFlat_m32_IVFPQ_nlist128_m8";
@@ -826,7 +845,8 @@
                     "search_method": urlparams["search_method"],
                     "img_urls": [],
                     "filenames": [],
-                    "resize": 0
+                    "resize": 0,
+                    "search_backbone": 'HERE_CONCH'
                 };
 
 
@@ -854,6 +874,7 @@
                     var search_method = document.getElementById("search_method").value;
                     var knn_k = parseInt(document.getElementById("knn_k").value);
                     var search_project = document.getElementById("search_project").value;
+                    var search_backbone = document.getElementById("search_backbone").value;
                     
                     document.getElementById("btn_search_again").setAttribute("hidden", "hidden");
                     params_dict["resize"] = 0;
@@ -865,6 +886,7 @@
 
                         if (search_project === 'ST') {
                             search_method = 'faiss_IndexFlatIP';
+                            search_method = 'faiss_IndexFlatL2';
                             use_viewer21 = false;
                         } else {
                             search_method = 'faiss_IndexHNSWFlat_m32_IVFPQ_nlist128_m8';
@@ -874,16 +896,17 @@
                         $('#search_project').val(search_project).change();
                         $('#search_feature').val(search_feature).change();
                         $('#search_method').val(search_method).change();
+                        $('#search_backbone').val(search_backbone).change();
 
                         params_dict['k'] = knn_k;
                         params_dict['search_project'] = search_project;
                         params_dict['search_feature'] = search_feature;
                         params_dict['search_method'] = search_method;
+                        params_dict['search_backbone'] = search_backbone;
 
                         const count = files.length;
-                        if (count > 0) {
+                        if (count > 0) { 
                             example_image = null;
-
                             params_dict['img_urls'] = [];
                             params_dict['filenames'] = [];
 
@@ -907,7 +930,7 @@
                                 })(filename);
                                 reader.readAsDataURL(file);
                             }
-                        } else if (example_image !== null) {
+                        } else if (example_image !== null) { 
                             params_dict['img_urls'] = [example_image];
                             params_dict['filenames'] = [example_image];
                             do_search(params_dict);
@@ -937,11 +960,13 @@
                     var search_method = document.getElementById("search_method").value;
                     var knn_k = parseInt(document.getElementById("knn_k").value);
                     var search_project = document.getElementById("search_project").value;
+                    var search_backbone = document.getElementById("search_backbone").value;
                     
                     if (search_feature !== params_dict["search_feature"] || 
                         knn_k !== params_dict["k"] ||
                         search_method !== params_dict["search_method"] ||
-                        search_project !== params_dict["search_project"]
+                        search_project !== params_dict["search_project"] ||
+                        search_backbone !== params_dict["search_backbone"]
                     ) {
                         document.getElementById("btn_search_again").setAttribute("hidden", "hidden");
                         document.getElementById("final_result_div").setAttribute("hidden", "hidden");

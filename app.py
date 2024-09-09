@@ -1,274 +1,9 @@
-import sys,os,json,glob
-import pandas as pd
-import numpy as np
-import tarfile
-import io
-import gc
-import re
-import faiss
-from sklearn.metrics import pairwise_distances
-import base64
-import lmdb
-import torch
-import torch.nn.functional as F
-from models import AttentionModel
-import torch.nn as nn
-from timm.data.transforms_factory import create_transform
-from timm.data import resolve_data_config
-import timm
-import pickle
-import time
-from PIL import Image, ImageDraw, ImageFont
-from flask import Flask, render_template, request, jsonify, url_for
-from werkzeug.middleware.proxy_fix import ProxyFix
-
-from matplotlib import pyplot as plt
-import matplotlib as mpl
-mpl.use('agg')
-import random
-import pymysql
-import pyarrow.parquet as pq
-from transformers import CLIPModel, CLIPProcessor
-
-# (CHANGE THIS)
-DB_USER = "root"
-DB_PASSWORD = "JiangLab_NCI_123"
-DB_HOST = "localhost"
-DB_DATABASE = "hidare_app"  
-
-
-DATA_DIR = f'data_HiDARE_PLIP_20240208'
-ST_ROOT = f'{DATA_DIR}/20240202v4_ST/PanCancer2GPUsFP/shared_attention_imagenetPLIP/split1_e95_h224_density_vis/feat_before_attention_feat/test/analysis/one_patient_top_128'
-project_names = ['TCGA-COMBINED', 'KenData', 'ST']  # do not change the order
-project_start_ids = {'TCGA-COMBINED': 0, 'KenData': 159402517, 'ST': 239029686}
-
-def get_db():
-    db_conn = pymysql.connect(user=DB_USER, password=DB_PASSWORD, host=DB_HOST, database=DB_DATABASE)
-    db_conn.autocommit = False
-    db_cursor = db_conn.cursor()
-    return db_conn, db_cursor
-
-feature_extractor = None
-config = None
-transform = None
-state_dict = None
-state_dict_ProvGigaPath = None
-state_dict_CONCH = None
-
-feature_extractor = CLIPModel.from_pretrained(f"{DATA_DIR}/assets/vinid_plip")
-image_processor = CLIPProcessor.from_pretrained(f"{DATA_DIR}/assets/vinid_plip")
-feature_extractor = feature_extractor.eval()
-
-# encoder + attention except final
-attention_model = AttentionModel()
-state_dict = torch.load(f"{DATA_DIR}/assets/snapshot_95.pt", map_location='cpu')
-# state_dict = torch.load(f"{DATA_DIR}/assets/snapshot_66_HERE_PLIP.pt", map_location='cpu')
-attention_model.load_state_dict(state_dict['MODEL_STATE'], strict=False)
-attention_model.eval()
-
-attention_model_ProvGigaPath = AttentionModel(backbone='ProvGigaPath')
-state_dict_ProvGigaPath = torch.load(f"{DATA_DIR}/assets/snapshot_39_HERE_ProvGigaPath.pt", map_location='cpu')
-attention_model_ProvGigaPath.load_state_dict(state_dict_ProvGigaPath['MODEL_STATE'], strict=False)
-attention_model_ProvGigaPath.eval()
-
-attention_model_CONCH = AttentionModel(backbone='CONCH')
-state_dict_CONCH = torch.load(f"{DATA_DIR}/assets/snapshot_53_HERE_CONCH.pt", map_location='cpu')
-attention_model_CONCH.load_state_dict(state_dict_CONCH['MODEL_STATE'], strict=False)
-attention_model_CONCH.eval()
-
-def load_cfg_from_json(json_file):
-    with open(json_file, "r", encoding="utf-8") as reader:
-        text = reader.read()
-    return json.loads(text)
-
-def load_model_config_from_hf(model_id: str):
-    cached_file = f'{DATA_DIR}/assets/ProvGigaPath/config.json'
-
-    hf_config = load_cfg_from_json(cached_file)
-    if 'pretrained_cfg' not in hf_config:
-        # old form, pull pretrain_cfg out of the base dict
-        pretrained_cfg = hf_config
-        hf_config = {}
-        hf_config['architecture'] = pretrained_cfg.pop('architecture')
-        hf_config['num_features'] = pretrained_cfg.pop('num_features', None)
-        if 'labels' in pretrained_cfg:  # deprecated name for 'label_names'
-            pretrained_cfg['label_names'] = pretrained_cfg.pop('labels')
-        hf_config['pretrained_cfg'] = pretrained_cfg
-
-    # NOTE currently discarding parent config as only arch name and pretrained_cfg used in timm right now
-    pretrained_cfg = hf_config['pretrained_cfg']
-    pretrained_cfg['hf_hub_id'] = model_id  # insert hf_hub id for pretrained weight load during model creation
-    pretrained_cfg['source'] = 'hf-hub'
-
-    # model should be created with base config num_classes if its exist
-    if 'num_classes' in hf_config:
-        pretrained_cfg['num_classes'] = hf_config['num_classes']
-
-    # label meta-data in base config overrides saved pretrained_cfg on load
-    if 'label_names' in hf_config:
-        pretrained_cfg['label_names'] = hf_config.pop('label_names')
-    if 'label_descriptions' in hf_config:
-        pretrained_cfg['label_descriptions'] = hf_config.pop('label_descriptions')
-
-    model_args = hf_config.get('model_args', {})
-    model_name = hf_config['architecture']
-    return pretrained_cfg, model_name, model_args
-
-from timm.layers import set_layer_config
-from timm.models import is_model, model_entrypoint, load_checkpoint
-
-def split_model_name_tag(model_name: str, no_tag: str = ''):
-    model_name, *tag_list = model_name.split('.', 1)
-    tag = tag_list[0] if tag_list else no_tag
-    return model_name, tag
-
-from urllib.parse import urlsplit
-
-def parse_model_name(model_name: str):
-    if model_name.startswith('hf_hub'):
-        # NOTE for backwards compat, deprecate hf_hub use
-        model_name = model_name.replace('hf_hub', 'hf-hub')
-    parsed = urlsplit(model_name)
-    assert parsed.scheme in ('', 'timm', 'hf-hub')
-    if parsed.scheme == 'hf-hub':
-        # FIXME may use fragment as revision, currently `@` in URI path
-        return parsed.scheme, parsed.path
-    else:
-        model_name = os.path.split(parsed.path)[-1]
-        return 'timm', model_name
-
-
-def create_model():
-    model_name = 'hf_hub:prov-gigapath/prov-gigapath'
-    model_source, model_name = parse_model_name(model_name)
-    pretrained_cfg, model_name, model_args = load_model_config_from_hf(model_name)
-    kwargs = {}
-    if model_args:
-        for k, v in model_args.items():
-            kwargs.setdefault(k, v)
-    create_fn = model_entrypoint(model_name)
-    with set_layer_config(scriptable=None, exportable=None, no_jit=None):
-        model = create_fn(
-            pretrained=False,
-            pretrained_cfg=pretrained_cfg,
-            pretrained_cfg_overlay=None,
-            **kwargs
-        )
-    load_checkpoint(model, f'{DATA_DIR}/assets/ProvGigaPath/pytorch_model.bin')
-
-    return model
-
-# ProvGigaPath
-ProvGigaPath_model = create_model()  # timm.create_model("hf_hub:prov-gigapath/prov-gigapath", pretrained=True)
-ProvGigaPath_model.eval()
-ProvGigaPath_transform = transforms.Compose(
-    [
-        transforms.Resize(256, interpolation=transforms.InterpolationMode.BICUBIC),
-        transforms.CenterCrop(224),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
-    ]
-)
-
-# CONCH
-from conch.open_clip_custom import create_model_from_pretrained
-CONCH_model, CONCH_image_processor = create_model_from_pretrained('conch_ViT-B-16', checkpoint_path=f'{DATA_DIR}/assets/CONCH_weights_pytorch_model.bin')
-CONCH_model.eval()
-
-
-
-faiss_Ms = [32]
-faiss_nlists = [128]
-faiss_indexes = {'faiss_IndexFlatIP': {}}
-for project_name in ['ST']:
-    faiss_indexes['faiss_IndexFlatIP'][project_name] = \
-        faiss.read_index(
-            f"{DATA_DIR}/assets/faiss_bins/all_data_feat_before_attention_feat_faiss_IndexFlatIP_{project_name}.bin")
-for m in faiss_Ms:
-    for nlist in faiss_nlists:
-        faiss_indexes[f'faiss_IndexHNSWFlat_m{m}_IVFPQ_nlist{nlist}_m8'] = {}
-        for project_name in project_names:
-            faiss_indexes[f'faiss_IndexHNSWFlat_m{m}_IVFPQ_nlist{nlist}_m8'][project_name] = \
-                faiss.read_index(
-                    f"{DATA_DIR}/assets/faiss_bins/all_data_feat_before_attention_feat_faiss_IndexHNSWFlat_m{m}_IVFPQ_nlist{nlist}_m8_{project_name}.bin")
-
-with open(f'{DATA_DIR}/assets/randomly_1000_data.pkl', 'rb') as fp:
-    randomly_1000_data = pickle.load(fp)
-
-font = ImageFont.truetype("Gidole-Regular.ttf", size=36)
-
-# setup LMDB
-txns = {}
-for project_name in project_names:
-    txns[project_name] = []
-    dirs = glob.glob(
-        f'{DATA_DIR}/lmdb_images_20240622_64/all_images_{project_name}_split*')
-    for i in range(len(dirs)):
-        lmdb_path = f'{DATA_DIR}/lmdb_images_20240622_64/all_images_{project_name}_split{i}/data'
-        env_i = lmdb.open(lmdb_path, subdir=False, readonly=True, lock=False, readahead=False, meminit=False,
-                          map_async=True)
-        txn_i = env_i.begin(write=False)
-        txns[project_name].append(txn_i)
+from app_common import *
 
 app = Flask(__name__,
             static_url_path='',
             static_folder='',
             template_folder='')
-
-def new_web_annotation2(cluster_label, min_dist, x, y, w, h, annoid_str):
-    anno = {
-        "type": "Annotation",
-        "body": [{
-            "type": "TextualBody",
-            "value": "{}".format(min_dist),
-            "purpose": "tagging"
-        }],
-        "target": {
-            "source": "http://localhost:3000/",
-            "selector": {
-                "type": "FragmentSelector",
-                "conformsTo": "http://www.w3.org/TR/media-frags/",
-                "value": f"xywh=pixel:{x},{y},{w},{h}"
-            }
-        },
-        "@context": "http://www.w3.org/ns/anno.jsonld",
-        "id": annoid_str
-    }
-    return anno
-
-
-def knn_search_images_by_faiss(query_embedding, k=10, search_project="ALL", search_method='faiss'):
-    if search_project == 'ALL':
-        Ds, Is = {}, {}
-        for iiiii, project_name in enumerate(project_names):
-            Di, Ii = faiss_indexes[search_method][project_name].search(
-                query_embedding, k)
-            Di = np.array([dd for dd, ii in zip(Di[0], Ii[0]) if ii>=0])
-            beginid = project_start_ids[project_name]
-            Ii = [beginid+ii for ii in Ii[0] if ii>=0]
-            Ds[project_name] = Di
-            Is[project_name] = Ii
-
-        D = np.concatenate(list(Ds.values()))
-        I = np.concatenate(list(Is.values()))
-        if 'HNSW' in search_method:
-            inds = np.argsort(D)[:k]
-        else:  # IP or cosine similarity, the larger, the better
-            inds = np.argsort(D)[::-1][:k]
-        return D[inds], I[inds]
-
-    else:
-        if search_method == 'faiss_IndexFlatIP':
-            Di, Ii = faiss_indexes['faiss_IndexFlatIP'][search_project].search(
-                query_embedding, k)
-        else: # using 'HNSW':
-            Di, Ii = faiss_indexes[search_method][search_project].search(
-                query_embedding, k)
-
-        Di = np.array([dd for dd, ii in zip(Di[0], Ii[0]) if ii>=0])
-        beginid = project_start_ids[search_project]
-        Ii = np.array([beginid+ii for ii in Ii[0] if ii>=0])
-        return Di, Ii
 
 
 @app.after_request
@@ -394,9 +129,11 @@ def gene_search():
 
     gene_names = []
     cohensd_thres = None
+    pvalue_corr_thres = None
     try:
         gene_names = [vv for vv in params['gene_names'].split(',') if len(vv) > 0]
         cohensd_thres = float(params['cohensd_thres'])
+        pvalue_corr_thres = float(params['pvalue_corr_thres'])
     except:
         pass
 
@@ -406,13 +143,16 @@ def gene_search():
     if cohensd_thres == None:
         cohensd_thres = 1.0
         status += 'Cohensd values should be float. Set it to 1.0. \n'
+    if pvalue_corr_thres == None:
+        pvalue_corr_thres = 0.1
+        status += 'P-value(corrected) should be float. Set it to 0.1. \n'
 
     db_conn, db_cursor = get_db()
-    hidare_table_str = f'cluster_result_table_20240208 as a, gene_table_20240208 as b, '\
-        f'cluster_table_20240208 as c, cluster_setting_table_20240208 as d, st_table_20240208 as e'
+    hidare_table_str = f'cluster_result_table_20240814 as a, gene_table_20240814 as b, '\
+        f'cluster_table_20240814 as c, cluster_setting_table_20240814 as d, st_table_20240814 as e'
 
     if len(gene_names) == 0:
-        if cohensd_thres is None:
+        if cohensd_thres is None or pvalue_corr_thres is None:
             sql = f'select a.*, b.symbol, d.cluster_setting, e.prefix, c.cluster_label, c.cluster_info, f.note from {hidare_table_str} '\
                 'where a.gene_id = b.id and c.id = a.c_id and c.cs_id = d.id and '\
                     'c.st_id = e.id order by a.cohensd desc limit 100;'
@@ -424,16 +164,16 @@ def gene_search():
 
         else:
             sql = f'select a.*, b.symbol, d.cluster_setting, e.prefix, c.cluster_label, c.cluster_info from {hidare_table_str} '\
-                'where a.cohensd > %s and a.gene_id = b.id and c.id = a.c_id and c.cs_id = d.id '\
+                'where a.cohensd > %s and a.pvalue_corrected < %s and a.gene_id = b.id and c.id = a.c_id and c.cs_id = d.id '\
                     'and c.st_id = e.id order by a.cohensd desc limit 100;'
             try:
-                db_cursor.execute(sql, (cohensd_thres,))
+                db_cursor.execute(sql, (cohensd_thres, pvalue_corr_thres, ))
             except:
                 db_conn, db_cursor = get_db()
-                db_cursor.execute(sql, (cohensd_thres,))
+                db_cursor.execute(sql, (cohensd_thres, pvalue_corr_thres, ))
 
     else:
-        if cohensd_thres is None:
+        if cohensd_thres is None or pvalue_corr_thres is None:
             sql = f'select a.*, b.symbol, d.cluster_setting, e.prefix, c.cluster_label, c.cluster_info from {hidare_table_str} '\
                 'where b.symbol in %s and a.gene_id = b.id and c.id = a.c_id and c.cs_id = d.id '\
                     'and c.st_id = e.id order by a.cohensd desc limit 100;'
@@ -444,13 +184,13 @@ def gene_search():
                 db_cursor.execute(sql, (gene_names,))
         else:
             sql = f'select a.*, b.symbol, d.cluster_setting, e.prefix, c.cluster_label, c.cluster_info from {hidare_table_str} '\
-                'where b.symbol in %s and a.cohensd > %s and a.gene_id = b.id and c.id = a.c_id and '\
+                'where b.symbol in %s and a.cohensd > %s and a.pvalue_corrected < %s and a.gene_id = b.id and c.id = a.c_id and '\
                     'c.cs_id = d.id and c.st_id = e.id order by a.cohensd desc limit 100;'
             try:
-                db_cursor.execute(sql, (gene_names, cohensd_thres))
+                db_cursor.execute(sql, (gene_names, cohensd_thres, pvalue_corr_thres))
             except:
                 db_conn, db_cursor = get_db()
-                db_cursor.execute(sql, (gene_names, cohensd_thres))
+                db_cursor.execute(sql, (gene_names, cohensd_thres, pvalue_corr_thres))
 
     result = db_cursor.fetchall()
     if result is None or len(result) == 0:
@@ -462,27 +202,26 @@ def gene_search():
     removed_columns = ['id', 'c_id', 'gene_id']
     result_df = result_df.drop(columns=removed_columns)
 
-    sql = f'select note from image_table_20240628 where svs_prefix in %s'
+    sql = f'select note from image_table_20240814 where svs_prefix in %s'
     ST_prefixes = result_df['ST_prefix'].value_counts().index.values.tolist()
     try:
         db_cursor.execute(sql, (ST_prefixes, ))
     except:
         db_conn, db_cursor = get_db()
-        db_cursor.execute(sql, (gene_names, cohensd_thres))
+        db_cursor.execute(sql, (ST_prefixes, ))
     result = db_cursor.fetchall()
     ST_notes = {prefix: note[0] for prefix, note in zip(ST_prefixes, result)}
     db_conn.close()
 
-    root = ST_ROOT
     notes = []
     patch_annotations = []
     for rowid, row in result_df.iterrows():
         prefix = row['ST_prefix']
         cluster_setting = row['cluster_setting']
         cluster_label = int(float(row['cluster_label']))
-        with open(os.path.join(root, cluster_setting, prefix, prefix+'_cluster_data.pkl'), 'rb') as fp:
+        with open(os.path.join(ST_ROOT, cluster_setting, prefix, prefix+'_cluster_data.pkl'), 'rb') as fp:
             cluster_labels = pickle.load(fp)['cluster_labels']
-        with open(os.path.join(root, cluster_setting, prefix, prefix+'_patches_annotations.json'), 'r') as fp:
+        with open(os.path.join(ST_ROOT, cluster_setting, prefix, prefix+'_patches_annotations.json'), 'r') as fp:
             all_patch_annotations = json.load(fp)
         inds = np.where(cluster_labels == cluster_label)[0]
         patch_annotations.append([all_patch_annotations[indd] for indd in inds])
@@ -542,295 +281,10 @@ def get_gene_map():
             'result': response_dict}
 
 
-def compute_mean_std_cosine_similarity_from_random1000(query_embedding, search_project='ALL'):
-    distances = 1 - pairwise_distances(query_embedding.reshape(1, -1),
-                                       randomly_1000_data[search_project if search_project in randomly_1000_data.keys() else 'ALL'],
-                                       metric='cosine')[0]
-    return np.mean(distances), np.std(distances), distances
-
-
-def get_image_patches(image):
-    # w = 2200
-    # h = 2380
-    sizex, sizey = 256, 256
-    w, h = image.size
-    if w < sizex:
-        image1 = Image.new(image.mode, (256, h), (0, 0, 0))
-        image1.paste(image, ((256 - w) // 2, 0))
-        image = image1
-    w, h = image.size
-    if h < sizey:
-        image1 = Image.new(image.mode, (w, 256), (0, 0, 0))
-        image1.paste(image, (0, (256 - h) // 2))
-        image = image1
-    w, h = image.size
-    # creating new Image object
-    image_shown = image.copy()
-    img1 = ImageDraw.Draw(image_shown)
-
-    num_x = np.floor(w / sizex)
-    num_y = np.floor(h / sizey)
-    box_w = int(num_x * sizex)
-    box_y = int(num_y * sizey)
-    startx = w // 2 - box_w // 2
-    starty = h // 2 - box_y // 2
-    patches = []
-    r = 5
-    patch_coords = []
-    for x1 in range(startx, w, sizex):
-        x2 = x1 + sizex
-        if x2 > w:
-            continue
-        for y1 in range(starty, h, sizey):
-            y2 = y1 + sizey
-            if y2 > h:
-                continue
-            img1.line((x1, y1, x1, y2), fill="white", width=1)
-            img1.line((x1, y2, x2, y2), fill="white", width=1)
-            img1.line((x2, y2, x2, y1), fill="white", width=1)
-            img1.line((x2, y1, x1, y1), fill="white", width=1)
-            cx, cy = x1 + sizex // 2, y1 + sizey // 2
-            patch_coords.append((cx, cy))
-            img1.ellipse((cx - r, cy - r, cx + r, cy + r), fill=(255, 0, 0, 0))
-            patches.append(image.crop((x1, y1, x2, y2)))
-    return patches, patch_coords, image_shown
-
-
-def get_query_embedding(img_urls, resize=0):
-    image_patches_all = []
-    patch_coords_all = []
-    image_shown_all = []
-    minWorH = 1e8
-    for img_url in img_urls:
-        if img_url[:4] == 'http':
-            image = Image.open(img_url.replace(
-                'https://hidare-dev.ccr.cancer.gov/', '')).convert('RGB')
-        elif img_url[:4] == 'data':
-            image_data = re.sub('^data:image/.+;base64,', '', img_url)
-            image = Image.open(io.BytesIO(
-                base64.b64decode(image_data))).convert('RGB')
-        else:
-            image = Image.open(img_url).convert('RGB')
-
-        W, H = image.size        
-        minWorH = min(min(W, H), minWorH)
-        if 0 < resize:
-            resize_scale = 1. / 2**resize
-            newW, newH = int(W*resize_scale), int(H*resize_scale)
-            minWorH = min(min(newW, newH), minWorH)
-            image = image.resize((newW, newH))
-        patches, patch_coords, image_shown = get_image_patches(image)
-        image_patches_all.append(patches)
-        patch_coords_all.append(patch_coords)
-        image_shown_all.append(image_shown)
-
-    image_patches = [
-        patch for patches in image_patches_all for patch in patches]
-    image_urls_all = {}
-    results_dict = None
-    with torch.no_grad():
-        images = image_processor(images=image_patches, return_tensors='pt')['pixel_values']
-        feat_after_encoder_feat = feature_extractor.get_image_features(images).detach()
-
-        # extract feat_before_attention_feat
-        embedding = feat_after_encoder_feat @ state_dict['MODEL_STATE']['attention_net.0.weight'].T + \
-            state_dict['MODEL_STATE']['attention_net.0.bias']
-        # get the attention scores
-        results_dict = attention_model(
-            feat_after_encoder_feat.unsqueeze(0))
-        # weighted the features using attention scores
-        embedding = torch.mm(results_dict['A'], embedding)
-        # embedding = results_dict['global_feat'].detach().numpy()
-        embedding = embedding.detach().numpy()
-
-        if len(image_patches_all) > 1:
-            atten_scores = np.split(results_dict['A'].detach().numpy()[0], np.cumsum(
-                [len(patches) for patches in image_patches_all])[:-1])
-        else:
-            atten_scores = [results_dict['A'].detach().numpy()[0]]
-        for ii, atten_scores_ in enumerate(atten_scores):
-            I1 = ImageDraw.Draw(image_shown_all[ii])
-            for jj, score in enumerate(atten_scores_):
-                I1.text(patch_coords_all[ii][jj], "{:.4f}".format(
-                    score), fill=(0, 255, 254), font=font)
-
-            img_byte_arr = io.BytesIO()
-            image_shown_all[ii].save(img_byte_arr, format='JPEG')
-            image_urls_all[str(ii)] = "data:image/jpeg;base64, " + \
-                base64.b64encode(img_byte_arr.getvalue()).decode()
-
-    embedding = embedding.reshape(1, -1)
-    embedding /= np.linalg.norm(embedding)
-    return embedding, image_urls_all, results_dict, minWorH
-
-
 @app.route('/image_search', methods=['POST', 'GET'])
 def image_search():
     params = request.get_json()
-    k = 100
-    if 'k' in params:
-        k = int(float(params['k']))
-    if k <= 0:
-        k = 10
-    if k >= 500:
-        k = 500
-    search_project = 'ALL'
-    if 'search_project' in params:
-        search_project = params['search_project']
-    search_method = 'faiss'
-    if 'search_method' in params:
-        search_method = params['search_method']
-    if search_project == 'ST':  
-        search_method = 'faiss_IndexFlatIP'
-    if search_method == 'faiss_IndexFlatIP':
-        search_project = 'ST'
-    start = time.perf_counter()
-
-    query_embedding, images_shown_urls, results_dict, minWorH = \
-        get_query_embedding(params['img_urls'], resize=int(float(params['resize'])))  # un-normalized
-    query_embedding = query_embedding.reshape(1, -1)
-
-    coxph_html_dict = {}
-
-    query_embedding /= np.linalg.norm(query_embedding)  # l2norm normalized
-
-    D, I = knn_search_images_by_faiss(query_embedding,
-                                      k=k, search_project=search_project,
-                                      search_method=search_method)
-    
-    random1000_mean, random1000_std, random1000_dists = compute_mean_std_cosine_similarity_from_random1000(
-        query_embedding, search_project=search_project)
-    final_response = {}
-    # iinds = np.argsort(I)
-    # D = D[iinds].tolist()
-    # I = I[iinds].tolist()
-    db_conn, db_cursor = get_db()
-
-    sql = f'select a.*, b.scale, b.patch_size_vis_level, b.svs_prefix, b.note from '\
-        'faiss_table_20240628 as a, image_table_20240628 as b where '\
-            'a.rowid in %s and a.svs_prefix_id = b.svs_prefix_id and '\
-                'a.project_id = b.project_id'
-    try:
-        db_cursor.execute(sql, ([ind + 1 for ind in I],))
-    except:
-        db_conn, db_cursor = get_db()
-        db_cursor.execute(sql, ([ind + 1 for ind in I],))
-
-    res = db_cursor.fetchall()
-    db_conn.close()
-    infos = {int(item[0]) - 1: item for item in res}
-    del res
-    gc.collect()
-
-    for score, ind in zip(D, I):
-
-        if ind not in infos:
-            continue
-
-        rowid, x, y, svs_prefix_id, proj_id, scale, patch_size_vis_level, slide_name, note = infos[ind]
-        scale = float(scale)
-        patch_size_vis_level = int(patch_size_vis_level)
-        if len(note) == 0:
-            note = 'No clinical information. '
-
-        item = {'_score': score,
-                '_zscore': (score - random1000_mean) / random1000_std,
-                '_pvalue': len(np.where(random1000_dists >= score)[0]) / len(random1000_dists)}
-        project_name = project_names[proj_id]
-        x0, y0 = int(x), int(y)
-        # image_id = '{}_{}_x{}_y{}'.format(project_name, slide_name, x, y)
-        image_id = '{}_{}_x{:d}_y{:d}'.format(proj_id, svs_prefix_id, x, y)
-        image_name = '{}_x{}_y{}'.format(slide_name, x, y)
-
-        if 'ST' in project_name:
-            has_gene = '1'
-        else:
-            has_gene = '0'
-
-        image_id_bytes = image_id.encode('ascii')
-        img_bytes = None
-        for i in range(len(txns[project_name])):
-            if img_bytes is None:
-                img_bytes = txns[project_name][i].get(image_id_bytes)
-
-        if img_bytes is None:
-            continue
-
-        im = Image.open(io.BytesIO(img_bytes))
-        buffer = io.BytesIO()
-        im.save(buffer, format="jpeg")
-        encoded_image = base64.b64encode(buffer.getvalue()).decode()
-        img_url = "data:image/jpeg;base64, " + encoded_image
-
-        x = int(float(scale) * float(image_name.split('_')[-2].replace('x', '')))
-        y = int(float(scale) * float(image_name.split('_')[-1].replace('y', '')))
-
-        if slide_name in final_response:
-            final_response[slide_name]['images'].append(
-                {'img_url': img_url, 'x': x, 'y': y, 'x0': x0, 'y0': y0, 'image_name': image_name,
-                 'has_gene': has_gene})
-            final_response[slide_name]['annotations'].append(
-                new_web_annotation2(0, "{:.3f}, z{:.3f}, p{:.3f}".format(item['_score'], item['_zscore'],
-                                                                         item['_pvalue']),
-                                    x, y, patch_size_vis_level, patch_size_vis_level, ""))
-            final_response[slide_name]['scores'].append(float(item['_score']))
-            final_response[slide_name]['zscores'].append(
-                float(item['_zscore']))
-            final_response[slide_name]['note'] = note
-        else:
-            final_response[slide_name] = {}
-            final_response[slide_name]['project_name'] = project_name if project_name != "KenData" else "NCIData"
-            final_response[slide_name]['images'] = []
-            final_response[slide_name]['images'].append(
-                {'img_url': img_url, 'x': x, 'y': y, 'x0': x0, 'y0': y0, 'image_name': image_name,
-                 'has_gene': has_gene})
-            final_response[slide_name]['annotations'] = []
-            final_response[slide_name]['annotations'].append(
-                new_web_annotation2(0, "{:.3f}, z{:.3f}, p{:.3f}".format(item['_score'], item['_zscore'],
-                                                                         item['_pvalue']),
-                                    x, y, patch_size_vis_level, patch_size_vis_level, ""))
-            final_response[slide_name]['scores'] = []
-            final_response[slide_name]['scores'].append(float(item['_score']))
-            final_response[slide_name]['zscores'] = []
-            final_response[slide_name]['zscores'].append(
-                float(item['_zscore']))
-            final_response[slide_name]['note'] = note
-    end = time.perf_counter()
-    time_elapsed_ms = (end - start) * 1000
-
-    zscore_sum_list = []
-    for k in final_response.keys():
-        final_response[k]['min_score'] = float(min(final_response[k]['scores']))
-        final_response[k]['max_score'] = float(max(final_response[k]['scores']))
-        final_response[k]['min_zscore'] = float(min(final_response[k]['zscores']))
-        final_response[k]['max_zscore'] = float(max(final_response[k]['zscores']))
-        zscore_sum = float(sum(final_response[k]['zscores']))
-        final_response[k]['zscore_sum'] = zscore_sum
-        zscore_sum_list.append(abs(zscore_sum))
-        final_response[k]['_random1000_mean'] = float(random1000_mean)
-        final_response[k]['_random1000_std'] = float(random1000_std)
-        final_response[k]['_time_elapsed_ms'] = float(time_elapsed_ms)
-    sort_inds = np.argsort(zscore_sum_list)[::-1].tolist()
-    allkeys = list(final_response.keys())
-    ranks = {rank: allkeys[ind] for rank, ind in enumerate(sort_inds)} # sorted by zscore_sum descend order
-
-    # prediction
-    table_str = [
-        '<table border="1"><tr><th>task</th><th>prediction</th></tr>']
-    for k,v in attention_model.classification_dict.items():
-        Y_prob_k = F.softmax(results_dict[k + '_logits'], dim=1).detach().numpy()[0]
-        table_str.append(
-            '<tr><td>{}</td><td>{}: {:.3f}</td></tr>'.format(k.replace('_cls', ''), v[1], Y_prob_k[1]))
-    for k in attention_model.regression_list:
-        table_str.append(
-            '<tr><td>{}</td><td>{:.3f}</td></tr>'.format(k, results_dict[k + '_logits'].item()))
-    table_str.append('</table>')
-    pred_str = ''.join(table_str)
-
-    gc.collect()
-    return {'current': 100, 'total': 100, 'status': 'Task completed!',
-            'result': {'coxph_html_dict': coxph_html_dict, 'response': final_response, 'ranks': ranks, 'pred_str': pred_str,
-            'images_shown_urls': images_shown_urls, 'minWorH': minWorH}}
+    return image_search_main(params)
 
 
 app.wsgi_app = ProxyFix(app.wsgi_app)

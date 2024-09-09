@@ -1,0 +1,1576 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>HiDARE -- A Demo of Differential Analysis on Histopathology Images</title>
+    <link rel="stylesheet" href="annotorious-openseadragon/dist/annotorious.min.css">
+    <link rel="stylesheet" href="static/css/Base.css">
+    <link rel="stylesheet" href="static/css/Common.css">
+    <link rel="stylesheet" href="mycss.css">    
+</head>
+
+<body>
+    <div>
+
+        <header class="push" role="banner">
+            <div id="nvcgSlSiteBanner" class="row">
+                <div class="slot-item only-SI large-4 columns">
+                    <a href="https://www.cancer.gov/" target="_blank">
+                        <img src="Logo_NCI.svg" width="100%">
+                    </a>
+                </div>
+
+                <div class="slot-item only-SI large-2 columns">
+                    <img src="hidare_logo3.svg" width="100%">
+                </div>
+            </div>
+        </header>
+
+        <div id="page">
+            <div class="fixedtotop" style="position: relative">
+                <div class="headroom-area slide headroom--top headroom--not-bottom">
+                    <!-- Buffer BAR -->
+                    <div class="language-bar"></div>
+                    <div id="nvcgSlUtilityBar" class="utility-background hide-for-medium-down"></div>
+                </div>
+
+                <div class="nav-search-bar gradient header">
+                    <div id="nvcgSlMainNav" class="row">
+
+                        <div class="slot-item first-SI">
+                            <div class="navigation">
+                                <nav id="mega-nav" role="navigation">
+                                    <ul class="menu nav-menu">
+                                        <li class="nav-item lvl-1 item-1">
+                                            <div class="nav-item-title">
+                                                <a href="/" class="active">
+                                                    Overview
+                                                </a>
+                                            </div>
+                                        </li>
+
+
+
+                                        <li class="nav-item lvl-1 item-7">
+                                            <div class="nav-item-title">
+                                                <a href="/help" class="">
+                                                    Help
+                                                </a>
+                                            </div>
+                                        </li>
+
+                                        <li class="nav-item lvl-1 item-8">
+                                            <div class="nav-item-title">
+                                                <a href="/contact" class="">
+                                                    Contact
+                                                </a>
+                                            </div>
+                                        </li>
+
+                                        <li class="nav-item lvl-1 item-9">
+                                            <div class="nav-item-title">
+                                                <!-- Padding empty -->
+                                            </div>
+                                        </li>
+                                    </ul>
+                                </nav>
+                            </div>
+                        </div>
+
+
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <div id="page">
+            <br />
+
+            <h1 style="color:#002fff; text-align: center;">Differential Analysis on Histopathology Images</h1>
+            <!-- JS -->
+            <script type="text/javascript" src='/openseadragon/build/openseadragon/openseadragon.js'></script>
+            <script type="text/javascript" src='/jquery/dist/jquery.min.js'></script>
+            <script type="text/javascript"
+                src="/annotorious-openseadragon/dist/openseadragon-annotorious.min.js"></script>
+            <script defer="defer"
+                src="/recogito-client-plugins/plugins/annotorious-shape-labels/dist/annotorious-shape-labels.min.js"></script>
+            <script src="/mycolors.js?ver=1234" type="text/javascript"></script>
+
+            <!--<script type="text/javascript" src="{{ url_for('static', filename='openseadragon/build/openseadragon/openseadragon.js') }}"></script>-->
+            <!--<script type="text/javascript" src="{{ url_for('static', filename='jquery/dist/jquery.min.js') }}"></script>-->
+            <!--<script type="text/javascript" src="{{ url_for('static', filename='annotorious-openseadragon/dist/openseadragon-annotorious.min.js') }}"></script>-->
+            <!--<script type="text/javascript" defer="defer" src="{{ url_for('static', filename='recogito-client-plugins/plugins/annotorious-shape-labels/dist/annotorious-shape-labels.min.js') }}"></script>-->
+            <!--<script type="text/javascript" src="{{ url_for('static', filename='mycolors.js') }}"></script>-->
+
+            <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+            <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.153.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.153.0/examples/jsm/"
+    }
+  }
+
+</script>
+
+            <div class="column">
+                <div style="margin: 1px; padding: 1px; border: 1px; background-color: Wheat">
+                    <label for="project_type" style="color:red">Project: </label>
+                    <select name="project_type" id="project_type">
+                        <option value="" selected disabled>Select one project</option>
+                        <option value="ST">Spatial Transcriptomics</option>
+                    </select>
+
+                    <label for="task_type" style="color:red">Task Type: </label>
+                    <select name="task_type" id="task_type">
+                        <option value="survival_groups">survival_groups</option>
+                        <option value="response_groups" selected>response_groups</option>
+                        <option value="one_patient">(ST) one_patient</option>
+
+                        <option value="FEC-T+Trastuzumab_group">(TransNEO) FEC-T+Trastuzumab</option>
+                        <option value="T-FEC_group">(TransNEO) T-FEC</option>
+
+                        <!-- <option value="ResistantSensitive_group" hidden>(Sheba) ResistantSensitive</option> -->
+
+                        <option value="LumA_survival_group">(METABRIC) LumA_survival</option>
+                        <option value="LumB_survival_group">(METABRIC) LumB_survival</option>
+                        <option value="claudin-low_survival_group">(METABRIC) claudin-low_survival</option>
+                        <option value="Her2_survival_group">(METABRIC) Her2_survival</option>
+                        <option value="Normal_survival_group">(METABRIC) Normal_survival</option>
+                        <option value="TriNeg_survival_group">(METABRIC) TripleNegative_survival</option>
+                        <option value="Pre_response_group">(BintrafuspAlfa) Pretreatment_response</option>
+                        <!-- <option value="ControlAb_weight_label" hidden>(Mouse) ControlAb_weight</option>
+            <option value="AntiTGFb_weight_label" hidden>(Mouse) AntiTGFb_weight</option>
+
+            <option value="18C_SCC_response_group" hidden>(Wiem) 18C_SCC_response</option>
+            <option value="18C_cervical_response_group" hidden>(Wiem) 18C_cervical_response</option>
+            <option value="18C_HNSCC_response_group" hidden>(Wiem) 18C_HNSCC_response</option>
+            <option value="HNSCC_response_group" hidden>(Wiem) HNSCC_response</option> -->
+
+                        <!-- CCRCC -->
+                        <option value="ENSG00000149131.16_rna">SERPING1 (ENSG00000149131.16_rna)</option>
+                        <option value="ENSG00000149131.16_proteome">SERPING1 (ENSG00000149131.16_proteome)</option>
+                        <option value="ENSG00000173372.17_proteome">C1QA (ENSG00000173372.17_proteome)</option>
+
+                        <!-- LUAD -->
+                        <option value="ENSG00000136250.12_rna">AOAH (ENSG00000136250.12_rna)</option>
+                        <option value="ENSG00000136250.12_proteome">AOAH (ENSG00000136250.12_proteome)</option>
+
+
+                        <!-- COAD -->
+                        <!-- BRCA -->
+                        <!-- BRCA-TripleNegative -->
+                        <option value="ENSG00000159403.18_rna">C1R (ENSG00000159403.18_rna)</option>
+                        <option value="ENSG00000159403.18_proteome">C1R (ENSG00000159403.18_proteome)</option>
+
+                        <!-- Baktiar -->
+                        <option value="GeneGroup">GeneGroup (Vector vs SERPING1)</option>
+
+                    </select>
+
+                    <label for="patient">Choose a patient:</label>
+                    <select name="patient" id="patient">
+                        <option value="ALL" selected>ALL</option>
+                    </select>
+                    <label for="ds_type" style="color:red">Trained On: </label>
+                    <select name="ds_type" id="ds_type">
+                        <option value="PanCancer" selected>PanCancer</option>
+                        <option value="BRCAOnly">BRCAOnly</option>
+                    </select>
+                    <div hidden>
+                        <label for="encoder_type" style="color:red">Encoder Type: </label>
+                        <select name="encoder_type" id="encoder_type">
+                            <option value="imagenet" selected>ImageNetPretrained</option>
+                            <!--            <option value="patch_mtl">PatchMTL</option>-->
+                        </select>
+                    </div>
+
+
+                    <label for="backbone_type" style="color:red">Backbone Type: </label>
+                    <select name="backbone_type" id="backbone_type">
+                        <!-- <option value="mobilenetv3">MobileNetV3</option> 
+            <option value="CLIP">CLIP</option>  -->
+                        <option value="PLIP">PLIP</option>
+                        <option value="ProvGigaPath">ProvGigaPath</option>
+                        <option value="CONCH" selected>CONCH</option>
+                    </select>
+
+                    <div hidden>
+                        <label for="feature_type" style="color:red">Feature Type: </label>
+                        <select name="feature_type" id="feature_type">
+                            <option value="after_encoder" disabled>after_encoder</option>
+                            <option value="before_attention" selected>before_attention</option>
+                        </select>
+                        <label for="subset_type" style="color:red">subset: </label>
+                        <select name="subset_type" id="subset_type">
+                            <option value="test" selected>test</option>
+                        </select>
+                        <label for="split_num" style="color:red">Split: </label>
+                        <select name="split_num" id="split_num" disabled>
+                            <option value="0" selected>0</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                        </select>
+                        <label for="num_patches" style="color:red">NumPatches: </label>
+                        <select name="num_patches" id="num_patches">
+                            <!--            <option value="64" selected>64</option>-->
+                            <option value="128">128</option>
+                            <!--            <option value="256">256</option>-->
+                            <!--            <option value="512">512</option>-->
+                        </select>
+                    </div>
+
+                    <div hidden>
+                        <label for="feature_norm_type" style="color:red">Feature Norm Type: </label>
+                        <select name="feature_norm_type" id="feature_norm_type">
+                            <option value="meanstd" selected>meanstd</option>
+                        </select>
+                    </div>
+
+                    <label for="dr_method" style="color:red">Dimension Reduction Method: </label>
+                    <select name="dr_method" id="dr_method">
+                        <option value="none" selected>none</option>
+                        <option value="umap3d">umap3d</option>
+                        <option value="pca3d">pca3d</option>
+                    </select>
+
+                    <label for="cluster_method" style="color:red">Cluster Method: </label>
+                    <select name="cluster_method" id="cluster_method">
+                        <option value="kmeans" selected>kmeans</option>
+                        <option value="hierarchical">hierarchical</option>
+                    </select>
+
+                    <div hidden>
+                        <label for="cluster_metric" style="color:red">Cluster Metric: </label>
+                        <select name="cluster_metric" id="cluster_metric">
+                            <option value="euclidean" selected>euclidean</option>
+                        </select>
+                    </div>
+
+                    <label for="num_clusters" style="color:red">NumClusters: </label>
+                    <select name="num_clusters" id="num_clusters">
+                        <option value="8" selected>8</option>
+                        <option value="12">12</option>
+                        <option value="16">16</option>
+                        <option value="20">20</option>
+                    </select>
+
+                    <label for="clustering_threshold" style="color:red">Threshold: </label>
+                    <select name="clustering_threshold" id="clustering_threshold">
+                        <option value="1" selected>No threshold</option>
+                        <option value="10">10</option>
+                        <option value="20">20</option>
+                        <option value="30">30</option>
+                        <option value="40">40</option>
+                        <option value="50">50</option>
+                    </select>
+
+                    <button id="button_show_cluster_fractions" onclick="show_cluster_fractions2()">Show Cluster
+                        Fractions</button>
+                    <!--        <button id="button_show_tb_vis" onclick="button_show_tb_vis()">Show Tensorboard</button>-->
+                    <button id="button_show_umap3dvis" onclick="show_umap3dvis()">Show UMAP3D</button>
+                    <button id="button_download_cluster_data" onclick="download_cluster_data()">Download Cluster
+                        Data</button>
+<div hidden>
+                    <label for="search_feature" style="color:red" hidden>Feature used for searching: </label>
+                    <select name="search_feature" id="search_feature" hidden>
+                        <option value="before_attention" selected>before_attention</option>
+                        <option value="before_attention_umap3d" disabled>before_attention_umap3d</option>
+                    </select>
+                    <label for="search_method" style="color:red" hidden>Method used for searching: </label>
+                    <select name="search_method" id="search_method" hidden>
+                    </select>
+                    <label for="search_knn_k" style="color:red" hidden>Number of returned search patches: </label>
+                    <input value="50" type="text" id="search_knn_k" hidden>
+
+                    <label for="search_project" style="color:red" hidden>Project used for searching: </label>
+                    <select name="search_project" id="search_project" hidden>
+                        <option value="ALL" selected>All</option>
+                        <!-- <option value="Adoptive_TIL_Breast">Adoptive_TIL_Breast</option>
+                <option value="WiemDataCheck">Wiem</option>                
+                <option value="ShebaV3">Sheba</option>
+                <option value="BintrafuspAlfa">BintrafuspAlfa</option>
+                <option value="Mouse">MouseData(Lalage)</option> -->
+
+                        <option value="TransNEO">TransNEO</option>
+                        <option value="METABRIC">METABRIC</option>
+                        <option value="ST">ST</option>
+                        <option value="KenData">NCIData</option>
+                        <option value="TCGA-ALL">TCGA</option>
+
+                        <option value="TCGA-ACC">TCGA-ACC</option>
+                        <option value="TCGA-BLCA">TCGA-BLCA</option>
+                        <option value="TCGA-BRCA">TCGA-BRCA</option>
+                        <option value="TCGA-CESC">TCGA-CESC</option>
+                        <option value="TCGA-CHOL">TCGA-CHOL</option>
+                        <option value="TCGA-COAD">TCGA-COAD</option>
+                        <option value="TCGA-DLBC">TCGA-DLBC</option>
+                        <option value="TCGA-ESCA">TCGA-ESCA</option>
+                        <option value="TCGA-GBM">TCGA-GBM</option>
+                        <option value="TCGA-HNSC">TCGA-HNSC</option>
+                        <option value="TCGA-KICH">TCGA-KICH</option>
+                        <option value="TCGA-KIRC">TCGA-KIRC</option>
+                        <option value="TCGA-KIRP">TCGA-KIRP</option>
+                        <option value="TCGA-LGG">TCGA-LGG</option>
+                        <option value="TCGA-LIHC">TCGA-LIHC</option>
+                        <option value="TCGA-LUAD">TCGA-LUAD</option>
+                        <option value="TCGA-LUSC">TCGA-LUSC</option>
+                        <option value="TCGA-MESO">TCGA-MESO</option>
+                        <option value="TCGA-OV">TCGA-OV</option>
+                        <option value="TCGA-PAAD">TCGA-PAAD</option>
+                        <option value="TCGA-PCPG">TCGA-PCPG</option>
+                        <option value="TCGA-PRAD">TCGA-PRAD</option>
+                        <option value="TCGA-READ">TCGA-READ</option>
+                        <option value="TCGA-SARC">TCGA-SARC</option>
+                        <option value="TCGA-SKCM">TCGA-SKCM</option>
+                        <option value="TCGA-STAD">TCGA-STAD</option>
+                        <option value="TCGA-TGCT">TCGA-TGCT</option>
+                        <option value="TCGA-THCA">TCGA-THCA</option>
+                        <option value="TCGA-THYM">TCGA-THYM</option>
+                        <option value="TCGA-UCEC">TCGA-UCEC</option>
+                        <option value="TCGA-UCS">TCGA-UCS</option>
+                        <option value="TCGA-UVM">TCGA-UVM</option>
+                    </select>
+                </div>
+                <div id="status_div" hidden></div>
+            </div>
+
+                <div style="border: 3px solid black;padding: 2px; background-color: Ivory">
+
+                    <div>
+                        <label style="color:blue"><b>Group 1</b></label>
+                        <label for="category1">Choose a category:</label>
+                        <select name="category1" id="category1">
+                            <option value="-1" selected></option>
+                            <option value="0">Lobular</option>
+                            <option value="1">Ductal</option>
+                            <option value="2">Other</option>
+                        </select>
+
+                        <label for="slides">Choose a slide:</label>
+                        <select name="slides" id="slides">
+                        </select>
+                        <button id="button_load" onclick="show_image()">Show Image</button>
+                        <button id="button_show_patches" onclick="show_patches()">Show Patches</button>
+                        <button id="button_clear_patches" onclick="clear_patches()">Clear Patches</button>
+                        <div id="gene_data_div" hidden>
+                            <a href="" id="gene_data">Gene Data</a>
+                            <a href="" id="cluster_data">Cluster Data</a>
+                            <a href="" id="cluster_analysis_data">Result1</a>
+                            <a href="" id="cluster_analysis_data2">Result2</a>
+                        </div>
+                    </div>
+                    <br />
+
+                    <table style="width:100%">
+                        <tr style="background-color: NavajoWhite">
+                            <td>image</td>
+                            <td>attention map</td>
+                            <td>selected patches in each cluster</td>
+                        </tr>
+                        <tr>
+                            <td style="width:25%">
+                                <div id="viewer1" style="display: inline-block; height: 300px; width: 100%"></div>
+                            </td>
+                            <td style="width:25%">
+                                <div id="viewer2" style="display: inline-block; height: 300px; width: 100%"></div>
+                            </td>
+                            <td style="width:50%">
+                                <div id="viewer4" style="height: 300px; overflow:scroll;"></div>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                <br />
+
+                <div style="border: 3px solid black;padding: 2px; background-color: AliceBlue">
+                    <div>
+                        <label style="color:blue"><b>Group 2</b></label>
+                        <label for="category2">Choose a category:</label>
+                        <select name="category2" id="category2">
+                            <option value="-1" selected></option>
+                            <option value="0">Lobular</option>
+                            <option value="1">Ductal</option>
+                            <option value="2">Other</option>
+                        </select>
+                        <label for="slides1">Choose a slide:</label>
+                        <select name="slides1" id="slides1">
+                        </select>
+                        <button id="button_load1" onclick="show_image1()">Show Image</button>
+                        <button id="button_show_patches1" onclick="show_patches1()">Show Patches</button>
+                        <button id="button_clear_patches1" onclick="clear_patches1()">Clear Patches</button>
+                        <div id="gene_data_div1" hidden>
+                            <a href="" id="gene_data1">Gene Data</a>
+                            <a href="" id="cluster_data1">Cluster Data</a>
+                            <a href="" id="cluster_analysis_data1">Result1</a>
+                            <a href="" id="cluster_analysis_data21">Result2</a>
+                        </div>
+                    </div>
+                    <br />
+                    <table style="width:100%">
+                        <tr style="background-color: NavajoWhite">
+                            <td>image</td>
+                            <td>attention map</td>
+                            <td>selected patches in each cluster</td>
+                        </tr>
+                        <tr>
+                            <td style="width:25%">
+                                <div id="viewer11" style="display: inline-block; height: 300px; width: 100%"></div>
+                            </td>
+                            <td style="width:25%">
+                                <div id="viewer21" style="display: inline-block; height: 300px; width: 100%"></div>
+                            </td>
+                            <td style="width:50%">
+                                <div id="viewer41" style="height: 300px; overflow:scroll;"></div>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            <div>
+                <button id="debug_button" onclick="debug_button();" hidden>Debug</button>
+            </div>
+
+            <script type="text/javascript">
+                function add_one_option_to_select(select_elem, option_text, option_value, option_index, disabled = false) {
+                    let option = document.createElement("option");
+                    option.text = option_text;
+                    option.value = option_value;
+                    if (disabled)
+                        option.setAttribute("disabled", "disabled")
+                    select_elem.add(option, option_index);
+                }
+                function add_search_methods() {
+                    let e = document.getElementById("search_method");
+                    clear_select_options("search_method");
+                    let index = 0;
+
+                    add_one_option_to_select(e, "ES", "ES", index, true);
+                    index += 1;
+
+                    // let faiss_ITQ_ds = [128]; // [32, 64, 128, 256];
+                    // let faiss_Ms = [8]; // [8, 16, 32];
+                    // let faiss_nlists = [256]; //[256, 512, 1024];
+                    let faiss_ITQ_ds = [128];
+                    let faiss_Ms = [32];
+                    let faiss_nlists = [128];
+
+                    faiss_ITQ_ds.forEach((dd) => {
+                        let faiss_type = `faiss_IndexBinaryFlat_ITQ${dd}_LSH`;
+                        add_one_option_to_select(e, faiss_type, faiss_type, index, false);
+                        index += 1;
+                    });
+                    for (let i = 0; i < faiss_Ms.length; i++) {
+                        for (let j = 0; j < faiss_nlists.length; j++) {
+                            let faiss_type = `faiss_IndexHNSWFlat_m${faiss_Ms[i]}_IVFPQ_nlist${faiss_nlists[j]}_m8`;
+                            add_one_option_to_select(e, faiss_type, faiss_type, index, false);
+                            index += 1;
+                        }
+                    }
+
+                    add_one_option_to_select(e, "faiss_IndexFlatIP", "faiss_IndexFlatIP", index, false);
+                    index += 1;
+                }
+                add_search_methods();
+
+                var formatter = function (annotation) {
+                    var c = parseInt(annotation.id.split('-')[1]);
+                    return {
+                        'style': `stroke-width:2; stroke: ${CSS_COLOR_NAMES[c]}`
+                    }
+                }
+
+                function UrlExists(url) {
+                    var http = new XMLHttpRequest();
+                    http.open('HEAD', url, false);
+                    http.send();
+                    return http.status !== 404;
+                }
+
+                async function show_status(message) {
+                    var status_e = document.getElementById('status_div');
+                    status_e.removeAttribute("hidden");
+                    status_e.innerHTML = `<p style='color:red'>${message}</p>`;
+                    await new Promise(r => setTimeout(r, 3000));
+                    status_e.setAttribute("hidden", "hidden");
+                }
+
+                var viewer1, viewer2, viewer3;
+                var viewer11, viewer21, viewer31;
+                var anno1, anno11;
+
+                window.onload = function () {
+                    viewer1 = OpenSeadragon({
+                        id: "viewer1",
+                        prefixUrl: "openseadragon/build/openseadragon/images/",
+                        // tileSources: "b/TCGA-E9-A3QA-01Z-00-DX1.9D664AF3-9ABD-4EED-B826-4C4FBFC33F3E_big_orig.dzi",
+                        showNavigator: true,
+                    });
+                    anno1 = OpenSeadragon.Annotorious(viewer1, {
+                        locale: 'auto',
+                        drawOnSingleClick: false,
+                        allowEmpty: false,
+                        formatter: formatter
+                        // formatters: [formatter, Annotorious.ShapeLabelsFormatter()]
+                        // disableEditor: true
+                    });
+
+
+                    viewer2 = OpenSeadragon({
+                        id: "viewer2",
+                        prefixUrl: "openseadragon/build/openseadragon/images/",
+                        // tileSources: "b/TCGA-E9-A3QA-01Z-00-DX1.9D664AF3-9ABD-4EED-B826-4C4FBFC33F3E_big_attention_map.dzi",
+                        showNavigator: true,
+                    });
+
+                    var viewer1Leading = false;
+                    var viewer2Leading = false;
+
+                    var viewer1Handler = function () {
+                        if (viewer2Leading) {
+                            return;
+                        }
+
+                        viewer1Leading = true;
+                        viewer2.viewport.zoomTo(viewer1.viewport.getZoom());
+                        viewer2.viewport.panTo(viewer1.viewport.getCenter());
+                        viewer1Leading = false;
+                    };
+
+                    var viewer2Handler = function () {
+                        if (viewer1Leading) {
+                            return;
+                        }
+
+                        viewer2Leading = true;
+                        viewer1.viewport.zoomTo(viewer2.viewport.getZoom());
+                        viewer1.viewport.panTo(viewer2.viewport.getCenter());
+                        viewer2Leading = false;
+                    };
+
+                    viewer1.addHandler('zoom', viewer1Handler);
+                    viewer2.addHandler('zoom', viewer2Handler);
+                    viewer1.addHandler('pan', viewer1Handler);
+                    viewer2.addHandler('pan', viewer2Handler);
+
+                    viewer11 = OpenSeadragon({
+                        id: "viewer11",
+                        prefixUrl: "openseadragon/build/openseadragon/images/",
+                        showNavigator: true,
+                    });
+                    anno11 = OpenSeadragon.Annotorious(viewer11, {
+                        locale: 'auto',
+                        drawOnSingleClick: false,
+                        allowEmpty: false,
+                        formatter: formatter
+                    });
+
+
+                    viewer21 = OpenSeadragon({
+                        id: "viewer21",
+                        prefixUrl: "openseadragon/build/openseadragon/images/",
+                        showNavigator: true,
+                    });
+
+                    var viewer11Leading = false;
+                    var viewer21Leading = false;
+
+                    var viewer11Handler = function () {
+                        if (viewer21Leading) {
+                            return;
+                        }
+
+                        viewer11Leading = true;
+                        viewer21.viewport.zoomTo(viewer11.viewport.getZoom());
+                        viewer21.viewport.panTo(viewer11.viewport.getCenter());
+                        viewer11Leading = false;
+                    };
+
+                    var viewer21Handler = function () {
+                        if (viewer11Leading) {
+                            return;
+                        }
+
+                        viewer21Leading = true;
+                        viewer11.viewport.zoomTo(viewer21.viewport.getZoom());
+                        viewer11.viewport.panTo(viewer21.viewport.getCenter());
+                        viewer21Leading = false;
+                    };
+
+                    viewer11.addHandler('zoom', viewer11Handler);
+                    viewer21.addHandler('zoom', viewer21Handler);
+                    viewer11.addHandler('pan', viewer11Handler);
+                    viewer21.addHandler('pan', viewer21Handler);
+                }
+
+                function get_results_path(return_dict = false) {
+                    const project_type_element = document.getElementById("project_type")
+                    const project_type = project_type_element.options[project_type_element.selectedIndex].value;
+                    const ds_type_element = document.getElementById("ds_type")
+                    const ds_type = ds_type_element.options[ds_type_element.selectedIndex].value;
+                    const split_num_element = document.getElementById("split_num")
+                    let split_num = split_num_element.options[split_num_element.selectedIndex].value;
+                    const encoder_type_element = document.getElementById("encoder_type")
+                    const encoder_type = encoder_type_element.options[encoder_type_element.selectedIndex].value;
+                    const backbone_type_element = document.getElementById("backbone_type")
+                    const backbone_type = backbone_type_element.options[backbone_type_element.selectedIndex].value;
+                    const feature_type_element = document.getElementById("feature_type")
+                    const feature_type = feature_type_element.options[feature_type_element.selectedIndex].value;
+                    const task_type_element = document.getElementById("task_type")
+                    const task_type = task_type_element.options[task_type_element.selectedIndex].value;
+                    const subset_type_element = document.getElementById("subset_type")
+                    const subset_type = subset_type_element.options[subset_type_element.selectedIndex].value;
+                    const num_patches_element = document.getElementById("num_patches")
+                    let num_patches = num_patches_element.options[num_patches_element.selectedIndex].value;
+
+                    const feature_norm_type_element = document.getElementById("feature_norm_type")
+                    const feature_norm_type = feature_norm_type_element.options[feature_norm_type_element.selectedIndex].value;
+                    const dr_method_element = document.getElementById("dr_method")
+                    const dr_method = dr_method_element.options[dr_method_element.selectedIndex].value;
+                    const cluster_method_element = document.getElementById("cluster_method")
+                    const cluster_method = cluster_method_element.options[cluster_method_element.selectedIndex].value;
+                    const cluster_metric_element = document.getElementById("cluster_metric")
+                    const cluster_metric = cluster_metric_element.options[cluster_metric_element.selectedIndex].value;
+                    const num_clusters_element = document.getElementById("num_clusters")
+                    const num_clusters = num_clusters_element.options[num_clusters_element.selectedIndex].value;
+                    const clustering_threshold_e = document.getElementById("clustering_threshold")
+                    let clustering_threshold = clustering_threshold_e.options[clustering_threshold_e.selectedIndex].value;
+
+                    const patient_e = document.getElementById("patient")
+                    let patient = patient_e.options[patient_e.selectedIndex].value;
+
+                    var postfix = "HF";
+                    split_num = 1;
+                    let epoch_num = 54;
+
+                    if (ds_type === "PanCancer") {
+                        postfix = "FP";
+                        split_num = 3;
+                        epoch_num = 22;
+
+                        if (backbone_type == "mobilenetv3") {
+                            postfix = "FP";
+                            split_num = 1;
+                            epoch_num = 57;
+                        }
+                        if (backbone_type == "CLIP") {
+                            postfix = "FP";
+                            split_num = 3;
+                            epoch_num = 99;
+                        }
+                        if (backbone_type == "PLIP") {
+                            postfix = "FP";
+                            split_num = 1;
+                            epoch_num = 95;
+                        }
+                    }
+
+                    let version_date = '20240208v4';
+                    if (project_type.includes('KenData')) {
+                        version_date = '20240202v4';
+                    }
+                    if (project_type.includes('ST')) {
+                        version_date = '20240202v4';
+                    }
+                    
+                    let path = `data_HiDARE_PLIP_20240208/${version_date}_${project_type}_v2/${backbone_type}/feat_${feature_type}_feat/analysis/${task_type}_top_${num_patches}/` +
+                        `${feature_norm_type}_${dr_method}_${cluster_method}_${cluster_metric}_${num_clusters}_${clustering_threshold}_clustering/${patient}`;
+
+                    console.log(`project_type=${project_type}`);
+                    console.log(`path=${path}`);
+                    if (return_dict) {
+                        return [{
+                            'version_date': version_date,
+                            'epoch_num': epoch_num,
+                            'project_type': project_type,
+                            'ds_type': ds_type,
+                            'postfix': postfix,
+                            'encoder_type': encoder_type,
+                            'backbone_type': backbone_type,
+                            'split_num': split_num,
+                            'feature_type': feature_type,
+                            'subset_type': subset_type,
+                            'num_patches': num_patches,
+                            'task_type': task_type,
+                            'feature_norm_type': feature_norm_type,
+                            'dr_method': dr_method,
+                            'cluster_method': cluster_method,
+                            'cluster_metric': cluster_metric,
+                            'num_clusters': num_clusters,
+                            'clustering_threshold': clustering_threshold,
+                            'patient': patient
+                        }, path];
+                    } else {
+                        return path;
+                    }
+                }
+
+
+                colorize = function (legendname, colorList) {
+                    var container = document.getElementById(legendname);
+                    container.innerHTML = "";
+
+                    for (var key in colorList) {
+                        var boxContainer = document.createElement("DIV");
+                        boxContainer.style.cssText = "display: table-cell; vertical-align: center";
+                        var box = document.createElement("DIV");
+                        var label = document.createElement("SPAN");
+
+                        label.innerHTML = `${key}`;
+                        box.className = "box";
+                        box.style.backgroundColor = colorList[key];
+
+                        boxContainer.appendChild(box);
+                        boxContainer.appendChild(label);
+                        boxContainer.append(document.createTextNode(""));
+
+                        container.appendChild(boxContainer);
+
+                    }
+                }
+
+                function clear_patches_for_each_cluster(category_id, viewer_id, legend_id) {
+
+                    let container = document.getElementById(viewer_id);
+                    container.innerHTML = "";
+                    let table_str = '<table><tr><td></td><td>fraction<br>(group level)</td><td>fraction<br>(case level)</td><td>patches</td></tr>';
+                    for (let i = 0; i < group_cluster_fractions['cluster_name'].length; i++) {
+                        let cname = group_cluster_fractions['cluster_name'][i];
+                        table_str += `<tr><td><div style="background-color: ${CSS_COLOR_NAMES[i]}">${cname}</div></td>`;
+                        table_str += `<td><div id="${category_id}_${i}_group_level_frac"></div></td>`;
+                        table_str += `<td><div id="${category_id}_${i}_frac"></div></td>`;
+                        table_str += `<td><div id="${category_id}_${i}"></div></td></tr>`;
+                    }
+                    table_str += '</table>';
+                    container.innerHTML = table_str;
+                }
+
+                function clear_select_options(eid) {
+                    let e = document.getElementById(eid);
+                    let i, L = e.options.length - 1;
+                    for (i = L; i >= 0; i--) {
+                        e.remove(i);
+                    }
+                }
+
+                function add_option_to_select(eid) {
+                    clear_select_options(eid);
+                    let e = document.getElementById(eid);
+                    var option = document.createElement("option");
+                    option.text = "";
+                    option.value = -1;
+                    e.add(option, 0);
+                    for (let i = 0; i < category_names.length; i++) {
+                        option = document.createElement("option");
+                        option.text = category_names[i];
+                        option.value = category_names[i];
+                        e.add(option, i + 1);
+                    }
+                }
+
+                function clear_all_image_patches() {
+                    viewer1.close();
+                    viewer2.close();
+                    viewer11.close();
+                    viewer21.close();
+                    anno1.clearAnnotations();
+                    anno11.clearAnnotations();
+
+                    document.getElementById("category1").selectedIndex = -1;
+                    document.getElementById("category2").selectedIndex = -1;
+                    clear_select_options("category1");
+                    clear_select_options("category2");
+                    add_option_to_select('category1');
+                    add_option_to_select('category2');
+                    clear_select_options("slides");
+                    clear_select_options("slides1");
+
+                    slide1_name = "";
+                    slide2_name = "";
+                    results_path = "";
+                }
+
+                var allTextLines;
+                var group_cluster_fractions = {};
+                var category_names = [];
+                var tb_dict = {}
+                var patient_list = [];
+
+                function load_patient_list() {
+                    patient_list = [];
+                    const project_type_element = document.getElementById("project_type")
+                    const project_type = project_type_element.options[project_type_element.selectedIndex].value;
+
+                    let path = `data_HiDARE_PLIP_20240208/assets/ST_kmeans_clustering/`;
+                    var filename = `${path}/patient_list.txt`;
+
+                    var xhttp = new XMLHttpRequest();
+                    xhttp.onreadystatechange = function () {
+                        if (this.readyState === 4 && this.status === 200) {
+                            // Typical action to be performed when the document is ready:
+                            patient_list = xhttp.responseText.split(/\r\n|\n/);
+                            console.log(patient_list, patient_list.length);
+
+                            clear_select_options("patient");
+
+                            let e = document.getElementById("patient");
+                            var option = document.createElement("option");
+                            option.text = "ALL";
+                            option.value = "ALL";
+                            e.add(option, 0);
+                            for (let i = 0; i < patient_list.length - 1; i++) {
+                                option = document.createElement("option");
+                                option.text = patient_list[i];
+                                option.value = patient_list[i];
+                                e.add(option, i + 1);
+                            }
+
+                        } else {
+                            console.log(this.status);
+                        }
+                    };
+                    xhttp.open("GET", filename, true);
+                    xhttp.send();
+                }
+
+                function load_group_cluster_fractions() {
+                    group_cluster_fractions = {};
+                    category_names = [];
+                    results_path = get_results_path();
+                    console.log(`results_path = ${results_path}`);
+                    var filename = `${results_path}/cluster_counts_by_category_fraction.csv`;
+
+                    var xhttp = new XMLHttpRequest();
+                    xhttp.onreadystatechange = function () {
+                        if (this.readyState === 4 && this.status === 200) {
+                            // Typical action to be performed when the document is ready:
+                            allText = xhttp.responseText;
+                            allTextLines = allText.split(/\r\n|\n/);
+                            console.log(allTextLines);
+                            // in here you basically manipulate your dom with fetched data or call on functions.
+
+                            console.log('group_cluster_fractions', group_cluster_fractions);
+                            for (let j = 0; j < allTextLines.length - 1; j++) {
+                                const splits = allTextLines[j].split(',');
+                                if (j === 0) {
+                                    group_cluster_fractions['cluster_name'] = splits.slice(1, splits.length);
+                                } else {
+                                    group_cluster_fractions[splits[0]] = splits.slice(1, splits.length);
+                                    category_names.push(splits[0]);
+                                }
+                            }
+
+                            clear_patches_for_each_cluster('category1', 'viewer4', 'legend1');
+                            clear_patches_for_each_cluster('category2', 'viewer41', 'legend2');
+                            clear_all_image_patches();
+                        } else {
+                            console.log(this.status);
+                        }
+                    };
+                    xhttp.open("GET", filename, true);
+                    xhttp.send();
+                }
+
+                load_group_cluster_fractions();
+
+                var cluster_fractions_per_case = {};
+
+                function load_fractions_per_case() {
+                    cluster_fractions_per_case = {};
+                    results_path = get_results_path();
+                    var filename = `${results_path}/cluster_counts_per_case.csv`;
+
+                    var xhttp = new XMLHttpRequest();
+                    xhttp.onreadystatechange = function () {
+                        if (this.readyState === 4 && this.status === 200) {
+                            // Typical action to be performed when the document is ready:
+                            allText = xhttp.responseText;
+                            allTextLines = allText.split(/\r\n|\n/);
+                            console.log(allTextLines);
+                            // in here you basically manipulate your dom with fetched data or call on functions.
+
+                            console.log('cluster_fractions_per_case', cluster_fractions_per_case);
+                            for (let j = 1; j < allTextLines.length - 1; j++) {
+                                const splits = allTextLines[j].split(',');
+                                const splits2 = splits[1].split('/');
+                                let svs_prefix = splits2[splits2.length - 1].replace('.svs', '');
+                                cluster_fractions_per_case[svs_prefix] = splits.slice(4, splits.length);
+                            }
+
+                            clear_patches_for_each_cluster('category1', 'viewer4', 'legend1');
+                            clear_patches_for_each_cluster('category2', 'viewer41', 'legend2');
+                            clear_all_image_patches();
+                        } else {
+                            console.log(this.status);
+                        }
+                    };
+                    xhttp.open("GET", filename, true);
+                    xhttp.send();
+                }
+
+                load_fractions_per_case();
+
+                function load_tb_dict() {
+                    tb_dict = {}
+                    var filename = 'tb_list.txt';
+                    var xhttp = new XMLHttpRequest();
+                    xhttp.onreadystatechange = function () {
+                        if (this.readyState === 4 && this.status === 200) {
+                            // Typical action to be performed when the document is ready:
+                            allText = xhttp.responseText;
+                            allTextLines = allText.split(/\r\n|\n/);
+                            console.log(allTextLines);
+
+                            for (let j = 0; j < allTextLines.length - 1; j++) {
+                                const splits = allTextLines[j].split(',');
+                                tb_dict[splits[0]] = splits[2];
+                            }
+                        } else {
+                            console.log(this.status);
+                        }
+                    }
+                    xhttp.open("GET", filename, true);
+                    xhttp.send();
+                }
+
+                load_tb_dict();
+
+                function load_all_data() {
+                    results_path = get_results_path();
+
+                    let existed = UrlExists(`${results_path}/cluster_counts_by_category_fraction.csv`);
+                    if (existed) {
+                        load_group_cluster_fractions();
+                        load_fractions_per_case();
+                        load_umap3d_data();
+                        load_final_centroids_data();
+                    } else {
+                        show_status("No clustering results found. Please contact admin.");
+                    }
+                }
+
+
+                function download_cluster_data() {
+                    results_path = get_results_path();
+
+                    let existed = UrlExists(`${results_path}/cluster_counts_per_case.csv`);
+                    if (existed) {
+                        let aa = document.createElement("a");
+                        aa.href = `${results_path}/cluster_counts_per_case.csv`;
+                        aa.click();
+                    } else {
+                        show_status("No clustering data found.");
+                    }
+                }
+
+                var results_path = "";
+                document.getElementById("project_type").onchange = function () {
+                    load_all_data();
+                    load_patient_list();
+
+                    let e = document.getElementById("project_type");
+                    if (e.options[e.selectedIndex].value !== 'one_patient') {
+                        document.getElementById("gene_data_div").setAttribute("hidden", "hidden");
+                        document.getElementById("gene_data_div1").setAttribute("hidden", "hidden");
+                    }
+                };
+                document.getElementById("ds_type").onchange = function () {
+                    load_all_data();
+                };
+                document.getElementById("encoder_type").onchange = function () {
+                    load_all_data();
+                };
+                document.getElementById("backbone_type").onchange = function () {
+                    load_all_data();
+                };
+                document.getElementById("feature_type").onchange = function () {
+                    load_all_data();
+                };
+                document.getElementById("subset_type").onchange = function () {
+                    load_all_data();
+                };
+                document.getElementById("split_num").onchange = function () {
+                    load_all_data();
+                };
+                document.getElementById("num_patches").onchange = function () {
+                    load_all_data();
+                };
+                document.getElementById("task_type").onchange = function () {
+                    load_all_data();
+
+                    // let e = document.getElementById("task_type");
+                    // if (e.options[e.selectedIndex].value !== 'one_patient') {
+                    //     document.getElementById("category1").selectedIndex = 0;
+                    //     document.getElementById("slides").selectedIndex = 0;
+                    // }
+                };
+                document.getElementById("feature_norm_type").onchange = function () {
+                    load_all_data();
+                };
+                document.getElementById("dr_method").onchange = function () {
+                    load_all_data();
+                };
+                document.getElementById("cluster_method").onchange = function () {
+                    load_all_data();
+                };
+                document.getElementById("cluster_metric").onchange = function () {
+                    load_all_data();
+                };
+                document.getElementById("num_clusters").onchange = function () {
+                    load_all_data();
+                };
+                document.getElementById("clustering_threshold").onchange = function () {
+                    load_all_data();
+                };
+                document.getElementById("patient").onchange = function () {
+                    load_all_data();
+                };
+
+                var slide1_name = "";
+                var slide2_name = "";
+                var umap3dvis_window = null;
+                document.getElementById("slides").addEventListener("change", (event) => {
+                    show_image();
+                    show_patches();
+                });
+                document.getElementById("slides1").addEventListener("change", (event) => {
+                    show_image1();
+                    show_patches1();
+                });
+
+                function show_clusters() {
+                    results_path = get_results_path();
+                    var task_type_e = document.getElementById('task_type');
+                    var subset_type_e = document.getElementById("subset_type");
+                    var feat_type_e = document.getElementById("feature_type");
+                    var task_type = task_type_e.options[task_type_e.selectedIndex].value;
+                    var subset_type = subset_type_e.options[subset_type_e.selectedIndex].value;
+                    var feat_type = feat_type_e.options[feat_type_e.selectedIndex].value;
+                    var url = `${results_path}/${task_type}_${subset_type}_feat_${feat_type}_feat_umap2d_kdeplot_no_category_with_centers.png`;
+                    img = '<img alt="" src="' + url + '" style="height: 100%; width: 100%; object-fit: contain">';
+                    popup = window.open('', '_blank', 'toolbar=0,location=0,menubar=0,width=512px,height=512px');
+                    popup.document.write(img);
+
+                }
+
+                function show_cluster_fractions() {
+                    results_path = get_results_path();
+                    var url = `${results_path}/cluster_fractions_boxplot_by_category.png`;
+                    img = '<img alt="" src="' + url + '" style="height: 100%; width: 100%; object-fit: contain">';
+                    popup = window.open('', '_blank', 'toolbar=0,location=0,menubar=0,width=512px,height=512px');
+                    popup.document.write(img);
+                }
+
+                function show_cluster_fractions2() {
+                    results_path = get_results_path();
+                    var task_type_e = document.getElementById('task_type');
+                    var task_type = task_type_e.options[task_type_e.selectedIndex].value;
+
+                    var c1 = document.getElementById('category1');
+                    var c2 = document.getElementById('category2');
+                    console.log(c1.selectedIndex)
+                    console.log(c2.selectedIndex)
+                    if (c1.options[c1.selectedIndex].text === "" || c2.options[c2.selectedIndex].text === "") {
+                        window.alert("Please select the two category in the following two panels.")
+                    } else {
+                        var c1_value = ALL_LABELS[task_type][c1.options[c1.selectedIndex].value];
+                        var c2_value = ALL_LABELS[task_type][c2.options[c2.selectedIndex].value];
+                        var url = `${results_path}/cluster_fractions_boxplot_between_${c1_value}_and_${c2_value}.png`;
+                        img = '<img alt="" src="' + url + '" style="height: 100%; width: 100%; object-fit: contain">';
+                        popup = window.open('', '_blank', 'toolbar=0,location=0,menubar=0,width=512px,height=512px');
+                        popup.document.write(img);
+                    }
+                }
+
+                function button_show_tb_vis() {
+                    results_path = get_results_path();
+                    let key = './' + results_path + '/vis'
+                    console.log(key);
+                    window.open(tb_dict[key]);
+                }
+
+
+                function add_change_listener(category_id, select_id, legend_id, viewer_id) {
+
+                    let e = document.getElementById(category_id);
+                    let e2 = document.getElementById(select_id);
+
+                    e.addEventListener('change', (event) => {
+                        results_path = get_results_path();
+                        let category_value = e.options[e.selectedIndex].value;
+                        let category_name = e.options[e.selectedIndex].text;
+                        console.log(category_value);
+                        console.log(category_name);
+
+                        if (category_value === "-1") {
+                            return;
+                        }
+
+                        var i, L = e2.options.length - 1;
+                        for (i = L; i >= 0; i--) {
+                            e2.remove(i);
+                        }
+                        // var option = document.createElement("option");
+                        // option.text = "Kiwi";
+                        // option.value = "Kiwi";
+                        // e2.add(option, 0);
+                        var filename = `${results_path}/counts_in_for_label_${category_name}.csv`;
+                        console.log(filename);
+                        var Lines = [];
+
+                        var xhttp = new XMLHttpRequest();
+                        xhttp.onreadystatechange = function () {
+                            if (this.readyState === 4 && this.status === 200) {
+                                // Typical action to be performed when the document is ready:
+                                console.log(xhttp.responseText);
+                                allText = xhttp.responseText;
+                                console.log(allText);
+                                allTextLines = allText.split(/\r\n|\n/);
+                                console.log(allTextLines);
+                                let task_type_e = document.getElementById("task_type");
+                                let task_type = task_type_e.options[task_type_e.selectedIndex].value;
+
+                                for (var j = 1; j < allTextLines.length - 1; j++) {
+                                    var splits = allTextLines[j].split(',');
+                                    var option = document.createElement("option");
+                                    if (task_type === "one_patient") {
+                                        option.text = `${splits[1]}`;
+                                    } else {
+                                        option.text = `${splits[2]}: ${splits[1]}`;
+                                    }
+                                    option.value = splits[1];
+                                    e2.add(option, j - 1);
+                                }
+
+                                if (e2.options.length > 0) {
+                                    e2.options[0].selected = true;
+                                }
+
+                                const colorList = {};
+                                for (let i = 0; i < group_cluster_fractions['cluster_name'].length; i++) {
+                                    colorList[`${group_cluster_fractions['cluster_name'][i]} (${group_cluster_fractions[category_name][i].substring(0, 6)})`]
+                                        = `${CSS_COLOR_NAMES[i]}`;
+                                }
+                                // colorize(legend_id, colorList);
+
+                                clear_patches_for_each_cluster(category_id, viewer_id, legend_id);
+
+                                if (category_id === 'category1') {
+                                    viewer1.close();
+                                    viewer2.close();
+                                    anno1.clearAnnotations();
+                                } else {
+                                    viewer11.close();
+                                    viewer21.close();
+                                    anno11.clearAnnotations();
+                                }
+
+                                // in here you basically manipulate your dom with fetched data or call on functions.
+                            } else {
+                                console.log(this.status);
+                            }
+                        };
+                        xhttp.open("GET", filename, true);
+                        xhttp.send();
+                        console.log('slides loaded');
+                    });
+                }
+
+                add_change_listener("category1", "slides", "legend1", "viewer4");
+                add_change_listener("category2", "slides1", "legend2", "viewer41");
+
+
+                /* Download an img */
+                function download(img) {
+                    var link = document.createElement("a");
+                    link.href = img.src;
+                    link.download = img.alt;
+                    link.style.display = "none";
+                    var evt = new MouseEvent("click", {
+                        "view": window,
+                        "bubbles": true,
+                        "cancelable": true
+                    });
+
+                    document.body.appendChild(link);
+                    link.dispatchEvent(evt);
+                    document.body.removeChild(link);
+                    console.log("Downloading...");
+                }
+
+                /* Download all images in 'imgs'.
+                 * Optionaly filter them by extension (e.g. "jpg") and/or
+                 * download the 'limit' first only  */
+                function downloadAll(imgs, ext, limit) {
+                    /* If specified, filter images by extension */
+                    if (ext) {
+                        ext = "." + ext;
+                        imgs = [].slice.call(imgs).filter(function (img) {
+                            var src = img.src;
+                            return (src && (src.indexOf(ext, src.length - ext.length) !== -1));
+                        });
+                    }
+
+                    /* Determine the number of images to download */
+                    limit = (limit && (0 <= limit) && (limit <= imgs.length))
+                        ? limit : imgs.length;
+
+                    /* (Try to) download the images */
+                    for (var i = 0; i < limit; i++) {
+                        var img = imgs[i];
+                        console.log("IMG: " + img.src + " (", img, ")");
+                        download(img);
+                    }
+                }
+
+
+                function show_patches_new(category_id, select_id, viewer, anno) {
+
+                    results_path = get_results_path();
+                    const e = document.getElementById(select_id);
+                    const slide_name = e.options[e.selectedIndex].value;
+                    const ee = document.getElementById(category_id);
+                    let category_name = ee.options[ee.selectedIndex].value;
+                    let num_patches_e = document.getElementById('num_patches');
+                    num_patches1 = parseFloat(num_patches_e.options[num_patches_e.selectedIndex].value);
+                    let num_patches = 0;
+                    let num_patches_per_case = 0;
+                    const task_type_element = document.getElementById("task_type")
+                    const task_type = task_type_element.options[task_type_element.selectedIndex].value;
+                    task_type111 = task_type;
+
+                    const filename = `${results_path}/${slide_name}_cs.json`;
+                    const xhttp = new XMLHttpRequest();
+                    xhttp.onreadystatechange = function () {
+                        if (this.readyState === 4 && this.status === 200) {
+                            // Typical action to be performed when the document is ready:
+                            allText = JSON.parse(xhttp.responseText);
+                            console.log(allText);
+
+                            for (let i = 0; i < group_cluster_fractions['cluster_name'].length; i++) {
+                                let cname = group_cluster_fractions['cluster_name'][i];
+                                let group_level_frac = group_cluster_fractions[category_name][i].substring(0, 6);
+                                allTextLines = allText[cname].split(/\r\n|\n/);
+
+                                let patch_filenames = [];
+                                let xs = [];
+                                let ys = [];
+                                let umap3dxs = [];
+                                let umap3dys = [];
+                                let umap3dzs = [];
+                                num_patches = 0;
+                                num_patches_per_case = 0;
+                                let xxs = [];
+                                let yys = [];
+                                for (let j = 0; j < allTextLines.length - 1; j++) {
+                                    let junk = allTextLines[j].split(',');
+                                    xs.push(junk[0]);
+                                    ys.push(junk[1]);
+                                    umap3dxs.push(junk[2]);
+                                    umap3dys.push(junk[3]);
+                                    umap3dzs.push(junk[4]);
+                                    num_patches = parseFloat(junk[7]);
+                                    num_patches_per_case = parseFloat((junk[8]));
+                                    xxs.push(junk[9]);
+                                    yys.push(junk[10]);
+                                    patch_filenames.push(`${results_path}/../../../../patch_images/${slide_name}/x${junk[9]}_y${junk[10]}.JPEG`);
+                                }
+                                let frac = 0.0;
+                                if (num_patches > 0) {
+                                    frac = parseInt(cluster_fractions_per_case[slide_name][i + 1]) / num_patches;
+                                }
+                                document.getElementById(`${category_id}_${i}_group_level_frac`).innerHTML = "";
+                                document.getElementById(`${category_id}_${i}_group_level_frac`).innerText = `${group_level_frac}`;
+                                document.getElementById(`${category_id}_${i}_frac`).innerHTML = "";
+                                document.getElementById(`${category_id}_${i}_frac`).innerText = `${frac.toFixed(4)}`;
+
+                                document.getElementById(`${category_id}_${i}`).innerHTML = "";
+                                if (patch_filenames.length > 0) {
+
+                                    var boxContainer = document.createElement("div");
+                                    boxContainer.style.cssText = "width: 100%; height: 64px; float: left; overflow: auto";
+                                    console.log(cname, patch_filenames);
+                                    for (let k = 0; k < patch_filenames.length; k++) {
+
+                                        //let div1 = document.createElement("DIV");
+                                        //div1.className = "patchzoom"
+                                        let img1 = document.createElement("img");
+                                        img1.className = "img1";
+                                        img1.alt = `${cname}_${k}`;
+                                        img1.src = `${patch_filenames[k]}`;
+
+                                        const junk = img1.src.split('/')
+                                        const annoid = junk[junk.length - 1].replace('.jpg', '');
+                                        console.log(`annoid=${annoid},(${xs[k]}, ${ys[k]})`);
+                                        img1.addEventListener("click", (event) => {
+                                            console.log(viewer.viewport.getZoom());
+                                            console.log(viewer.viewport.getCenter());
+
+                                            let viewport_coord = viewer.viewport.imageToViewportCoordinates(parseInt(xs[k]), parseInt(ys[k]));
+                                            console.log(viewport_coord);
+                                            viewer.viewport.panTo(viewport_coord);
+
+                                            if (event.button === 2) {
+                                                console.log("mouse-right clicked")
+                                            }
+
+                                            if (umap3dvis_window !== null) {
+                                                console.log('umap3dvis windows will be in ', umap3dxs[k], umap3dys[k], umap3dzs[k]);
+                                                umap3dvis_window.postMessage(img1.src + ',' + umap3dxs[k] + ',' + umap3dys[k] + ',' + umap3dzs[k],
+                                                    "*");
+                                            } else {
+                                                console.log('umap3dvis windows is missing. ', umap3dxs[k], umap3dys[k], umap3dzs[k]);
+                                            }
+                                        }); 
+
+                                        //div1.appendChild(img1)
+                                        boxContainer.appendChild(img1);
+                                    }
+                                    document.getElementById(`${category_id}_${i}`).appendChild(boxContainer);
+
+                                } 
+                            }
+                        }
+                    };
+                    xhttp.open("GET", filename, true);
+                    xhttp.send();
+                    console.log('patches json loaded');
+                }
+
+
+                function download_gene_data(btn_id, slide_name) {
+                    results_path = get_results_path();
+                    let btn = document.getElementById(btn_id);
+                    let existed = UrlExists(`${results_path}/../../../../gene_data/${slide_name}_gene_data.pkl`);
+                    if (existed) {
+                        btn.removeAttribute("hidden");
+                        btn.addEventListener("click", (event) => {
+                            let aa = document.createElement("a");
+                            aa.href = `${results_path}/../../../../gene_data/${slide_name}_gene_data.pkl`;
+                            aa.click();
+                        });
+                    } else {
+                        btn.setAttribute("hidden", "hidden");
+                    }
+                }
+
+
+                function set_for_gene_data(results_path, slide_id, gene_data_div_id, gene_data_a_id, cluster_data_a_id, btn_down_cluster_analysis_id, btn_down_cluster_analysis_id2, btn_gene_map_id, genenamesid) {
+                    var e = document.getElementById(slide_id);
+                    var value = e.value;
+                    let slide_name = e.options[e.selectedIndex].value;
+                    let existed = UrlExists(`${results_path}/../../../../gene_data/${slide_name}_gene_data.pkl`);
+                    let gene_div = document.getElementById(gene_data_div_id);
+                    if (existed) {
+                        gene_div.removeAttribute("hidden");
+                        document.getElementById(gene_data_a_id).href = `${results_path}/../../../../gene_data/${slide_name}_gene_data.pkl`;
+                        document.getElementById(cluster_data_a_id).href = `${results_path}/${slide_name}_cluster_data.pkl`;
+                        document.getElementById(btn_down_cluster_analysis_id).href = `${results_path}/${slide_name}_cluster_tests.pkl`;
+                        document.getElementById(btn_down_cluster_analysis_id2).href = `${results_path}/${slide_name}_cluster_tests2.csv`;
+                    } else {
+                        console.log(`${results_path}/${slide_name}_cluster_data.pkl not existed`);
+                        gene_div.setAttribute("hidden", "hidden");
+                    }
+                }
+
+                function show_image() {
+                    results_path = get_results_path();
+                    var e = document.getElementById("slides");
+                    var value = e.value;
+                    slide1_name = e.options[e.selectedIndex].value;
+                    console.log(`${results_path}`);
+                    viewer1.open(`${results_path}/../../../../../../big_images/${slide1_name}_big_orig.dzi`);
+                    viewer2.open(`${results_path}/../../../../big_images/${slide1_name}_big_attention_map.dzi`);
+                    anno1.clearAnnotations();
+
+                    set_for_gene_data(results_path, "slides", "gene_data_div", "gene_data", "cluster_data", "cluster_analysis_data", "cluster_analysis_data2", "btn_show_gene_maps", "gene_names");
+                }
+
+                function show_image1() {
+                    results_path = get_results_path();
+                    var e = document.getElementById("slides1");
+                    var value = e.value;
+                    slide2_name = e.options[e.selectedIndex].value;
+                    console.log(`${results_path}`);
+                    viewer11.open(`${results_path}/../../../../../../big_images/${slide2_name}_big_orig.dzi`);
+                    viewer21.open(`${results_path}/../../../../big_images/${slide2_name}_big_attention_map.dzi`);
+                    anno11.clearAnnotations();
+
+                    set_for_gene_data(results_path, "slides1", "gene_data_div1", "gene_data1", "cluster_data1", "cluster_analysis_data", "cluster_analysis_data2", "btn_show_gene_maps1", "gene_names1");
+                }
+
+                function show_patches() {
+
+                    results_path = get_results_path();
+                    var e = document.getElementById("slides");
+                    var slide_name = e.options[e.selectedIndex].value;
+                    anno1.clearAnnotations();
+                    anno1.loadAnnotations(`${results_path}/${slide_name}_patches_annotations.json`);
+
+                    show_patches_new('category1', 'slides', viewer1, anno1);
+                }
+
+                function show_patches1() {
+
+                    results_path = get_results_path();
+                    var e = document.getElementById("slides1");
+                    var slide_name = e.options[e.selectedIndex].value;
+                    anno11.clearAnnotations();
+                    anno11.loadAnnotations(`${results_path}/${slide_name}_patches_annotations.json`);
+
+                    show_patches_new('category2', 'slides1', viewer11, anno11);
+                }
+
+                function clear_patches() {
+                    anno1.clearAnnotations();
+                    //viewer3.close();
+                    clear_patches_for_each_cluster('category1', 'viewer4', 'legend1')
+                }
+
+                function clear_patches1() {
+                    anno11.clearAnnotations();
+                    //viewer31.close();
+                    clear_patches_for_each_cluster('category2', 'viewer41', 'legend2');
+                }
+
+
+                function openTabs(id_name) {
+                    // Declare all variables
+                    var i, tabcontent, tablinks;
+
+                    // Get all elements with class="tabcontent" and hide them
+                    tabcontent = document.getElementsByClassName("tabcontent");
+                    for (i = 0; i < tabcontent.length; i++) {
+                        tabcontent[i].style.display = "none";
+                    }
+
+                    // Get all elements with class="tablinks" and remove the class "active"
+                    tablinks = document.getElementsByClassName("tablinks");
+                    for (i = 0; i < tablinks.length; i++) {
+                        tablinks[i].className = tablinks[i].className.replace(" active", "");
+                    }
+
+                    // Show the current tab, and add an "active" class to the button that opened the tab
+                    document.getElementById(id_name).style.display = "block";
+                    event.currentTarget.className += " active";
+                }
+
+                var umap3d_data = {};
+                var final_centroids_data = {};
+                var task_type111 = null;
+                var num_patches1 = null;
+                var x_min = Infinity, x_max = -Infinity;
+                var y_min = Infinity, y_max = -Infinity;
+                var z_min = Infinity, z_max = -Infinity;
+                var center_x, center_y, center_z;
+
+                function show_umap3dvis() {
+                    results_path = get_results_path();
+                    umap3dvis_window = window.open(`/umap3dvis_v3.html`);
+                }
+
+                function load_umap3d_data() {
+                    x_min = Infinity;
+                    x_max = -Infinity;
+                    y_min = Infinity;
+                    y_max = -Infinity;
+                    z_min = Infinity;
+                    z_max = -Infinity;
+                    results_path = get_results_path();
+                    var filename = `${results_path}/all_data_for_umap3dvis.txt`;
+                    var xhttp = new XMLHttpRequest();
+                    xhttp.onreadystatechange = function () {
+                        if (this.readyState === 4 && this.status === 200) {
+                            // Typical action to be performed when the document is ready:
+                            var allText = xhttp.responseText;
+                            umap3d_data = allText.split(/\r\n|\n/);
+                            // in here you basically manipulate your dom with fetched data or call on functions.
+
+                            for (let j = 0; j < umap3d_data.length - 1; j++) {
+                                let splits = umap3d_data[j].split(',');
+                                let x = parseFloat(splits[1]);
+                                let y = parseFloat(splits[2]);
+                                let z = parseFloat(splits[3]);
+                                x_min = Math.min(x_min, x)
+                                x_max = Math.max(x_max, x);
+                                y_min = Math.min(y_min, y)
+                                y_max = Math.max(y_max, y);
+                                z_min = Math.min(z_min, z)
+                                z_max = Math.max(z_max, z);
+                            }
+
+                            console.log(`x limit is ${x_min}, ${x_max}`);
+                            console.log(`y limit is ${y_min}, ${y_max}`);
+                            console.log(`z limit is ${z_min}, ${z_max}`);
+                            center_x = (x_max + x_min) / 2;
+                            center_y = (y_max + y_min) / 2;
+                            center_z = (z_max + z_min) / 2;
+
+                        } else {
+                            console.log(this.status);
+                        }
+                    };
+                    xhttp.open("GET", filename, true);
+                    xhttp.send();
+                }
+
+                load_umap3d_data();
+
+                function load_final_centroids_data() {
+                    results_path = get_results_path();
+                    let e = document.getElementById("task_type");
+                    let task_type = e.options[e.selectedIndex].value;
+                    e = document.getElementById("subset_type");
+                    let subset_type = e.options[e.selectedIndex].value;
+                    let filename = `${results_path}/${task_type}_${subset_type}_final_centroids.txt`;
+                    var xhttp2 = new XMLHttpRequest();
+                    xhttp2.onreadystatechange = function () {
+                        if (this.readyState === 4 && this.status === 200) {
+                            // Typical action to be performed when the document is ready:
+                            var allText = xhttp2.responseText;
+                            final_centroids_data = allText.split(/\r\n|\n/);
+                        } else {
+                            console.log('No clusters. Maybe the clusters are removed from the threshold.')
+                        }
+                    }
+                    xhttp2.open("GET", filename, true);
+                    xhttp2.send();
+                }
+
+                load_final_centroids_data();
+
+
+            </script>
+
+        </div>
+
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="site-footer">
+        <div id="nvcgSlFooter">
+            <div class="slot-item only-SI">
+                <div class="site-footer__container">
+                    <div class="site-footer__agencies">
+                        <ul>
+                            <li><a href="http://www.hhs.gov/" target="_blank">U.S. Department of Health and Human
+                                    Services</a></li>
+                            <li><a href="https://www.cancer.gov/" target="_blank">National Cancer Institute</a></li>
+                            <li><a href="http://usa.gov/" target="_blank">USA.gov</a></li>
+                            <li><a href="https://www.hhs.gov/vulnerability-disclosure-policy/index.html"
+                                    target="_blank">HHS Vulnerability Disclosure</a></li>
+
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+    <!-- END FOOTER -->
+</body>
+
+</html>
