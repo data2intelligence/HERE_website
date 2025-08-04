@@ -2,6 +2,17 @@
 <html lang="en">
 
 <head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-Z253Z763E9"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-Z253Z763E9');
+</script>
+<script src="https://assets.adobedtm.com/6a4249cd0a2c/785de09de161/launch-70d67a6a40a8.min.js" async></script>
+
     <title>HiDARE -- A Demo of Differential Analysis on Histopathology Images</title>
     <link rel="stylesheet" href="annotorious-openseadragon/dist/annotorious.min.css">
     <link rel="stylesheet" href="static/css/Base.css">
@@ -677,7 +688,9 @@
                         version_date = '20240202v4';
                     }
                     
-                    let path = `data_HiDARE_PLIP_20240208/${version_date}_${project_type}_v2/${backbone_type}/feat_${feature_type}_feat/analysis/${task_type}_top_${num_patches}/` +
+                    // let path = `data_HiDARE_PLIP_20240208/${version_date}_${project_type}_v2/${backbone_type}/feat_${feature_type}_feat/analysis/${task_type}_top_${num_patches}/` +
+                    //     `${feature_norm_type}_${dr_method}_${cluster_method}_${cluster_metric}_${num_clusters}_${clustering_threshold}_clustering/${patient}`;
+                    let path = `data_HiDARE_PLIP_20240208/assets/ST_kmeans_clustering/analysis/${task_type}_top_${num_patches}/` +
                         `${feature_norm_type}_${dr_method}_${cluster_method}_${cluster_metric}_${num_clusters}_${clustering_threshold}_clustering/${patient}`;
 
                     console.log(`project_type=${project_type}`);
@@ -1383,8 +1396,8 @@
                     var value = e.value;
                     slide1_name = e.options[e.selectedIndex].value;
                     console.log(`${results_path}`);
-                    viewer1.open(`${results_path}/../../../../../../big_images/${slide1_name}_big_orig.dzi`);
-                    viewer2.open(`${results_path}/../../../../big_images/${slide1_name}_big_attention_map.dzi`);
+                    viewer1.open(`${results_path}/../../../../big_images/${slide1_name}_big_orig.dzi`);
+                    viewer2.open(`${results_path}/../../../../big_images_heatmap/${slide1_name}_big_attention_map.dzi`);
                     anno1.clearAnnotations();
 
                     set_for_gene_data(results_path, "slides", "gene_data_div", "gene_data", "cluster_data", "cluster_analysis_data", "cluster_analysis_data2", "btn_show_gene_maps", "gene_names");
@@ -1396,8 +1409,8 @@
                     var value = e.value;
                     slide2_name = e.options[e.selectedIndex].value;
                     console.log(`${results_path}`);
-                    viewer11.open(`${results_path}/../../../../../../big_images/${slide2_name}_big_orig.dzi`);
-                    viewer21.open(`${results_path}/../../../../big_images/${slide2_name}_big_attention_map.dzi`);
+                    viewer11.open(`${results_path}/../../../../big_images/${slide2_name}_big_orig.dzi`);
+                    viewer21.open(`${results_path}/../../../../big_images_heatmap/${slide2_name}_big_attention_map.dzi`);
                     anno11.clearAnnotations();
 
                     set_for_gene_data(results_path, "slides1", "gene_data_div1", "gene_data1", "cluster_data1", "cluster_analysis_data", "cluster_analysis_data2", "btn_show_gene_maps1", "gene_names1");

@@ -2,6 +2,16 @@
 <html lang="en">
 
 <head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-Z253Z763E9"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-Z253Z763E9');
+</script>
+<script src="https://assets.adobedtm.com/6a4249cd0a2c/785de09de161/launch-70d67a6a40a8.min.js" async></script>
     <title>HERE -- Hematoxylin & Eosin Retrieval Engine</title>
     <link rel="stylesheet" href="annotorious-openseadragon/dist/annotorious.min.css">
 
@@ -46,17 +56,40 @@
                                         <li class="nav-item lvl-1 item-1">
                                             <div class="nav-item-title">
                                                 <a href="/" class="active">
-                                                    Overview
+                                                    OVERVIEW
                                                 </a>
                                             </div>
                                         </li>
 
 
+                                        <li class="nav-item lvl-1 item-7">
+                                            <div class="nav-item-title">
+                                                <a href="/image_retrieval" class="">
+                                                    IMAGE-TO-IMAGE RETRIEVAL
+                                                </a>
+                                            </div>
+                                        </li>
+
+                                        <li class="nav-item lvl-1 item-7">
+                                            <div class="nav-item-title">
+                                                <a href="/gene_search_ST" class="">
+                                                    TRANSCRIPTOMICS-TO-IMAGE RETRIEVAL
+                                                </a>
+                                            </div>
+                                        </li>
+
+                                        <li class="nav-item lvl-1 item-7">
+                                            <div class="nav-item-title">
+                                                <a href="/download" class="">
+                                                    DOWNLOAD
+                                                </a>
+                                            </div>
+                                        </li>
 
                                         <li class="nav-item lvl-1 item-7">
                                             <div class="nav-item-title">
                                                 <a href="/help" class="">
-                                                    Help
+                                                    HELP
                                                 </a>
                                             </div>
                                         </li>
@@ -64,7 +97,7 @@
                                         <li class="nav-item lvl-1 item-8">
                                             <div class="nav-item-title">
                                                 <a href="/contact" class="">
-                                                    Contact
+                                                    CONTACT
                                                 </a>
                                             </div>
                                         </li>
@@ -92,22 +125,61 @@
             <br />
 
 
-            <div style="text-align: center; vertical-align: middle;">
-                <h1 style="color:#002fff; text-align: center;">
-                    <font face="Georgia, Arial" color="#DA6619">H</font>ematoxylin & <font face="Georgia, Arial"
-                        color="#DA6619">E</font>osin <font face="Georgia, Arial"
-                        color="#DA6619">R</font>etrieval <font face="Georgia, Arial" color="#DA6619">E</font>ngine
-                </h1>
-
-                <div>
-                    <h2>
-                        <a href="/image_retrieval" target="_blank" class="indexpagebutton">Image-to-Image and Image-to-Gene Retrieval</a><br />
-                    </h2>
-                    <h2>
-                        <a href="/gene_search_ST" target="_blank" class="indexpagebutton">Gene-to-Image Retrieval for Spatial Transcriptomics
-                            Data</a><br />
-                    </h2>
+            <div style="display: flex; flex-direction: column; align-items: center; width: 100%;">
+                <div style="display: flex; flex-direction: column; align-items: center; width: 100%;">
+                    <h1 style="color:#002fff; text-align: center;">
+                        <font face="Georgia, Arial" color="#DA6619">H</font>ematoxylin & <font face="Georgia, Arial"
+                            color="#DA6619">E</font>osin <font face="Georgia, Arial"
+                            color="#DA6619">R</font>etrieval <font face="Georgia, Arial" color="#DA6619">E</font>ngine
+                    </h1>
+                    <div style="text-align: left; width: 80%;">
+                        Hematoxylin and Eosin staining (H&E) is widely used in clinical practice, 
+                        but efficient and versatile Google-like image retrieval tools are lacking. 
+                        We developed the H&E Retrieval Engine (HERE) to analyze patient cases based on image similarities to database records. 
+                        Using H&E image regions as input, HERE searches 21.2 terabytes of whole-slide images from multiple tumor histopathology 
+                        cohorts through a 12.1-gigabyte memory index, and returns top images containing regions similar to the query. 
+                        HERE scans high-resolution images in the database using accurate artificial intelligence encoding and ultra-efficient 
+                        hierarchical skip indexing. HERE demonstrated performance superior to existing image retrieval tools based on blinded 
+                        pathologist scoring using benchmark queries that represent key image features of human tumors. 
+                        By pairing spatial transcriptomics with H&E images, HERE also enables retrieving image features from gene 
+                        transcriptomics input and identifies molecular pathways associated with tumor histologies.
+                        The HERE framework comprises two modules: Development and Retrieval.
+                    </div>
                 </div>
+                <br/>
+                <div style="text-align: center;">
+                    <img src="Fig1.png" style="width:30%; height:auto;" alt="HERE framework"/>
+                </div>
+
+                <br/>
+
+
+                <div style="text-align: center; width: 80%;">
+
+                    <div style="display: flex; text-align: center;">
+                        <!-- <div style="flex: 1; padding: 1px; text-align: left; width: 45%;">
+                            <ul style="list-style-type: disc;">
+                                <li><b>Model training</b>: Stage 1 trains a prediction model composed of an image encoder, attention map, and decoder using TCGA data from 32 tumor types. The input to the image encoder is H&E whole-slide images, and the decoder output includes a binary indication of gene mutation functions in cancer progression and average expression of pathway gene sets. </li>
+                                <li><b>Index generation</b>: Stage 2 indexes patch vectors encoded from the whole slide images from the NCI Lab of Pathology, TCGA, CPTAC, and spatial transcriptomics studies.</li>
+                            </ul>
+                            <div style="display: flex; align-items: center;justify-content: center;">
+                                    <a href="/download" target="_blank" class="indexpagebutton">Download</a>
+                            </div>
+                        </div>
+                        <div style="width: 2%;"></div> -->
+                        <div style="flex: 1; padding: 1px; text-align: left; width: 100%;">
+                            <ul style="list-style-type: disc;">
+                                <li>For a query H&E image patch or region, the <b>Image-to-Image</b> retrieval returns similar image patches and associated whole slides from the indexed database. If users select images with spatial transcriptomics (ST) data,  HERE returns images that closely match the query and the corresponding gene expression profiles from ST detection spots. </li>
+                                <li>The <b>Transcriptomics-to-Image</b> retrieval finds H&E slides with paired ST data where the query gene has high expression levels in ST detection spots associated with specific image feature clusters from those slides. </li>
+                            </ul>
+                            <div style="display: flex; align-items: center;justify-content: center;">
+                                    <a href="/image_retrieval" target="_blank" class="indexpagebutton">Image-to-Image Retrieval</a>
+                                    <a href="/gene_search_ST" target="_blank" class="indexpagebutton">Transcriptomics-to-Image Retrieval</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
 

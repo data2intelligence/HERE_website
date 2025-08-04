@@ -2,6 +2,17 @@
 <html lang="en">
 
 <head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-Z253Z763E9"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-Z253Z763E9');
+</script>
+<script src="https://assets.adobedtm.com/6a4249cd0a2c/785de09de161/launch-70d67a6a40a8.min.js" async></script>
+
     <title>HERE -- Hematoxylin & Eosin Retrieval Engine</title>
     <link rel="stylesheet" href="annotorious-openseadragon/dist/annotorious.min.css">
     <link rel="stylesheet" href="static/css/Base.css">
@@ -43,18 +54,41 @@
                                     <ul class="menu nav-menu">
                                         <li class="nav-item lvl-1 item-1">
                                             <div class="nav-item-title">
-                                                <a href="/" class="active">
-                                                    Overview
+                                                <a href="/" class="">
+                                                    OVERVIEW
                                                 </a>
                                             </div>
                                         </li>
 
 
+                                        <li class="nav-item lvl-1 item-7">
+                                            <div class="nav-item-title">
+                                                <a href="/image_retrieval" class="">
+                                                    IMAGE-TO-IMAGE RETRIEVAL
+                                                </a>
+                                            </div>
+                                        </li>
+
+                                        <li class="nav-item lvl-1 item-7">
+                                            <div class="nav-item-title">
+                                                <a href="/gene_search_ST" class="active">
+                                                    TRANSCRIPTOMICS-TO-IMAGE RETRIEVAL
+                                                </a>
+                                            </div>
+                                        </li>
+
+                                        <li class="nav-item lvl-1 item-7">
+                                            <div class="nav-item-title">
+                                                <a href="/download" class="">
+                                                    DOWNLOAD
+                                                </a>
+                                            </div>
+                                        </li>
 
                                         <li class="nav-item lvl-1 item-7">
                                             <div class="nav-item-title">
                                                 <a href="/help" class="">
-                                                    Help
+                                                    HELP
                                                 </a>
                                             </div>
                                         </li>
@@ -62,7 +96,7 @@
                                         <li class="nav-item lvl-1 item-8">
                                             <div class="nav-item-title">
                                                 <a href="/contact" class="">
-                                                    Contact
+                                                    CONTACT
                                                 </a>
                                             </div>
                                         </li>
@@ -98,8 +132,17 @@
                 src="/recogito-client-plugins/plugins/annotorious-shape-labels/dist/annotorious-shape-labels.min.js"></script>
             <script src="/mycolors.js?ver=1234" type="text/javascript"></script>
 
-            <h1 style="color:#002fff; text-align: center;">Gene-to-Image Retrieval for Spatial Transcriptomics
-                Data</h1>
+
+            <div style="display: flex; flex-direction: column; align-items: center; width: 100%;">
+            <h1 style="color:#002fff; text-align: center;">Transcriptomics-to-Image Retrieval</h1>
+
+                <div style="width: 80%;">
+
+                    We use spatial transcriptomics (ST) data paired with H&E images to identify image features linked to the high expression of a specific gene (for example, SERPING1). Instead of simply showing image patches with high gene expression, which wouldn’t account for visual similarities, we take a more structured approach. For each sample, we group image patches around ST detection spots into eight clusters based on encoding similarity, using the k-means algorithm. We do this clustering separately for each sample to avoid batch effects. Next, we test whether the expression of the query gene is significantly higher in spots within a given image cluster compared to those outside the cluster. As a result, for each gene, we produce a set of image clusters strongly associated with its high expression (Cohen’s d > 1 and FDR < 0.05).
+                </div>
+                <br/>
+            </div>
+
             <div style="padding: 2px; background-color: Ivory; text-align: center; vertical-align: middle;">
 
                 <div id="status_div1" hidden></div>
@@ -207,10 +250,14 @@
                 <div>
                     <div id="gene_data_div1" hidden>
                         <!--<a href="javascript:void(0)" id="slide_name_label"></a>-->
-                        <a href="" id="gene_data1">Gene data</a>
-                        <a href="" id="cluster_data1">Cluster data</a>
-                        <a href="" id="cluster_analysis_data1">Result1</a>
-                        <a href="" id="cluster_analysis_data21">Result2</a>
+                        Auxiliary data (click to download):
+                        <a href="" id="gene_data1" title="">Gene data</a> 
+                        | 
+                        <a href="" id="cluster_data1" title="">Cluster data</a> 
+                        <!-- |
+                        <a href="" id="cluster_analysis_data1" title="">Result1</a> 
+                        |
+                        <a href="" id="cluster_analysis_data21" title="">Result2</a>  -->
                         <div hidden>
                         <label for="gene_names1">Gene names: </label><input type="text" id="gene_names1" value="CD8A" hidden>
                         <button id="btn_show_gene_maps1" hidden>Show gene heatmap</button>
@@ -469,18 +516,6 @@
 
                 var results_path = null;
 
-                function get_results_path(project_name) {
-
-                    let version_date = '20240208v4';
-                    if (project_name.includes('KenData')) {
-                        version_date = '20240202v4';
-                    }
-                    if (project_name.includes('ST')) {
-                        version_date = '20240202v4';
-                    }
-                    return `data_HiDARE_PLIP_20240208/${version_date}_${project_name}/PanCancer2GPUsFP/shared_attention_imagenetPLIP/split1_e95_h224_density_vis/feat_before_attention_feat/test/big_images`;
-                }
-
                 function download(img) {
                     let link = document.createElement("a");
                     link.href = img.src;
@@ -633,8 +668,8 @@
                         gene_div.removeAttribute("hidden");
                         document.getElementById(gene_data_a_id).href = `${results_path}/../../../../gene_data/${slide_name}_gene_data.pkl`;
                         document.getElementById(cluster_data_a_id).href = `${results_path}/${slide_name}_cluster_data.pkl`;
-                        document.getElementById(btn_down_cluster_analysis_id).href = `${results_path}/${slide_name}_cluster_tests.pkl`;
-                        document.getElementById(btn_down_cluster_analysis_id2).href = `${results_path}/${slide_name}_cluster_tests2.csv`;
+                        // document.getElementById(btn_down_cluster_analysis_id).href = `${results_path}/${slide_name}_cluster_tests.pkl`;
+                        // document.getElementById(btn_down_cluster_analysis_id2).href = `${results_path}/${slide_name}_cluster_tests2.csv`;
 
                         let btn = document.getElementById(btn_gene_map_id);
                         btn.onclick = function () {

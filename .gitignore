@@ -5,3 +5,4 @@ __pycache__/
 rsync.sh
 wsgi.py
 differential_analysis_results/
+.vscode

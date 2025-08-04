@@ -2,6 +2,17 @@
 <html lang="en">
 
 <head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-Z253Z763E9"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-Z253Z763E9');
+</script>
+<script src="https://assets.adobedtm.com/6a4249cd0a2c/785de09de161/launch-70d67a6a40a8.min.js" async></script>
+
     <title>HERE -- Hematoxylin & Eosin Retrieval Engine</title>
     <link rel="stylesheet" href="annotorious-openseadragon/dist/annotorious.min.css">
     <link rel="stylesheet" href="static/css/Base.css">
@@ -45,18 +56,41 @@
                                     <ul class="menu nav-menu">
                                         <li class="nav-item lvl-1 item-1">
                                             <div class="nav-item-title">
-                                                <a href="/" class="active">
-                                                    Overview
+                                                <a href="/" class="">
+                                                    OVERVIEW
                                                 </a>
                                             </div>
                                         </li>
 
 
+                                        <li class="nav-item lvl-1 item-7">
+                                            <div class="nav-item-title">
+                                                <a href="/image_retrieval" class="active">
+                                                    IMAGE-TO-IMAGE RETRIEVAL
+                                                </a>
+                                            </div>
+                                        </li>
+
+                                        <li class="nav-item lvl-1 item-7">
+                                            <div class="nav-item-title">
+                                                <a href="/gene_search_ST" class="">
+                                                    TRANSCRIPTOMICS-TO-IMAGE RETRIEVAL
+                                                </a>
+                                            </div>
+                                        </li>
+
+                                        <li class="nav-item lvl-1 item-7">
+                                            <div class="nav-item-title">
+                                                <a href="/download" class="">
+                                                    DOWNLOAD
+                                                </a>
+                                            </div>
+                                        </li>
 
                                         <li class="nav-item lvl-1 item-7">
                                             <div class="nav-item-title">
                                                 <a href="/help" class="">
-                                                    Help
+                                                    HELP
                                                 </a>
                                             </div>
                                         </li>
@@ -64,7 +98,7 @@
                                         <li class="nav-item lvl-1 item-8">
                                             <div class="nav-item-title">
                                                 <a href="/contact" class="">
-                                                    Contact
+                                                    CONTACT
                                                 </a>
                                             </div>
                                         </li>
@@ -78,7 +112,6 @@
                                 </nav>
                             </div>
                         </div>
-
 
 
                     </div>
@@ -101,7 +134,14 @@
                 src="/recogito-client-plugins/plugins/annotorious-shape-labels/dist/annotorious-shape-labels.min.js"></script>
             <script src="/mycolors.js?ver=1234" type="text/javascript"></script>
 
-            <h1 style="color:#002fff; text-align: center;">Image-to-Image and Image-to-Gene Retrieval</h1>
+            <div style="display: flex; flex-direction: column; align-items: center; width: 100%;">
+                <h1 style="color:#002fff; text-align: center;">Image-to-Image Retrieval</h1>
+
+                <div style="width: 80%;">
+                    Users upload an image region of interest to retrieve similar image patches from the H&E collection from the NCI Lab of Pathology, TCGA, or CPTAC cohorts. HERE encodes the input image into a vector with the encoder and attention map. Then, the system will return top-K (50 by default) most similar image patches and their locations in the corresponding whole-tumor slides, together with clinical information if available.
+                </div>
+                <br/>
+            </div>
             <div id="status_div3"></div>
             
             <div id="helpoverlay" class="helpoverlay"></div>
@@ -109,7 +149,9 @@
                 <div style="text-align: left;padding: 1px;">
                     <button class="helpclose-btn" id="closePopup">Close</button>
                     1. You can scroll the whole-slide image on the left panel to examine the image details. <br/>
-                    2. You can click the patches on the right panel to see the whole slide H&E image. <br />
+                    2. You can click the patches on the right panel to see the whole slide H&E image. <br /><br/>
+                    In the result page, the <b>distance</b> means the mininum and maxinum Euclidean distances between the query patch and retrieved patches. 
+                    The <b>rank_sum</b> means the sum of rank scores computed from the background patches. Please refer to our manuscript for details.
                     <!-- 2. You can double click the patches on the right panel to see the gene expression if using
                     spatial transcriptomics data. -->
                 </div>
@@ -134,42 +176,46 @@
             <div class="divcontainer1_outer">
                 <div class="divcontainer1" id="divcontainer1">
                     <div id="divcontainer1Left">
-                        <div>
-                        <label for="file">1. Choose one or more images (jpeg/png/bmp):</label>
-                        <input type="file" id="file" accept="image/png, image/jpeg, image/bmp" onchange="readURL(this);" multiple />
-                        <div>or click an example image: 
-                            <a href="#" onclick="javascript:load_example_img(0);">1</a>,&nbsp;
-                            <a href="#" onclick="javascript:load_example_img(1);">2</a>,&nbsp;
-                            <a href="#" onclick="javascript:load_example_img(2);">3</a>
-                        </div>
-                        <select name="search_feature" id="search_feature" hidden>
-                            <option value="before_attention" selected>before_attention</option>
-                            <option value="before_attention_umap3d" disabled>before_attention_umap3d</option>
-                        </select>
-                        <select name="search_method" id="search_method" hidden>
-                        </select>
-                        </div>
-                        <br/>
-                        <div>
-                        <label for="knn_k"></label>2. Number of search images: <input value="50" type="text" id="knn_k">
-                        </div>
-                        <br/>
-                        <div>
-                        <label for="search_project">3. Select a project for search: </label>
-                        <select name="search_project" id="search_project">
-                            <option value="KenData_20240814" selected>NCIData</option>
-                            <option value="ST">ST</option>
-                            <option value="TCGA-COMBINED">TCGA</option>
-                            <option value="ALL">ALL</option>
-                        </select>
-                        <label for="search_backbone">4. backbone: </label>
-                        <select name="search_backbone" id="search_backbone">
-                            <option value="HERE_CONCH" selected>HERE_CONCH</option>
-                            <option value="HERE_UNI">HERE_UNI</option>
-                            <!-- <option value="HERE_ProvGigaPath">HERE_ProvGigaPath</option>
-                            <option value="HERE_PLIP">HERE_PLIP</option> -->
-                        </select>
-                        </div>
+                        <div style="text-align: left;">
+                            <div style="text-align: center; justify-content: center;">
+                                <label for="file">1. Choose one or more images (jpeg/png/bmp): </label>
+                                <input type="file" id="file" accept="image/png, image/jpeg, image/bmp" onchange="readURL(this);" multiple />
+                                <div>or click an example image: 
+                                    <a href="#" onclick="javascript:load_example_img(0);">example 1</a>,&nbsp;
+                                    <a href="#" onclick="javascript:load_example_img(1);">example 2</a>,&nbsp;
+                                    <a href="#" onclick="javascript:load_example_img(2);">example 3</a>
+                                </div>
+                                <select name="search_feature" id="search_feature" hidden>
+                                    <option value="before_attention" selected>before_attention</option>
+                                    <option value="before_attention_umap3d" disabled>before_attention_umap3d</option>
+                                </select>
+                                <select name="search_method" id="search_method" hidden>
+                                </select>
+                            </div>
+                            <br/>
+                            <div>
+                            <label for="knn_k"></label>2. Number of search images (K): <input value="50" type="text" id="knn_k">
+                            </div>
+                            <br/>
+                            <div>
+                            <label for="search_project">3. Select a cohort for search: </label>
+                            <select name="search_project" id="search_project">
+                                <option value="KenData_20240814" selected>NCIData</option>
+                                <option value="ST">ST</option>
+                                <option value="TCGA-COMBINED">TCGA</option>
+                                <option value="CPTAC">CPTAC</option>
+                                <option value="ALL">ALL</option>
+                            </select>
+                            <label for="search_backbone">4. backbone: </label>
+                            <select name="search_backbone" id="search_backbone">
+                                <option value="HERE_CONCH" selected>HERE_CONCH</option>
+                                <!-- <option value="HERE_UNI">HERE_UNI</option> -->
+                                <!-- <option value="HERE_ProvGigaPath">HERE_ProvGigaPath</option>
+                                <option value="HERE_PLIP">HERE_PLIP</option> -->
+                            </select>
+                            </div>
+                        </div>  
+
                         <div>
                             <div style="padding: 1px; text-align: center;">
                                 <button onclick="do_search_click()" id="btn_search">Search</button>
@@ -320,9 +366,49 @@
                     document.getElementById("status_div2").innerText = "";
                     progressBar.style.width = "0%";
                     params_dict['resize'] = 0;
+                    valid_images = [1];
                 }
 
 
+                function readURL_i_bak(input, ii, conainer_div) {
+                    if (input.files && input.files[ii]) {
+
+                        const img_i = document.createElement("IMG");
+                        img_i.id = `query_img_${ii}`;
+                        img_i.style.cssText = "height:96px;width:96px;margin:1px";
+                        img_i.addEventListener("dblclick", (event)=>{ 
+                                                let urlll = query_img_shown_urls[`query_img_${ii}`];
+                                                if (urlll) {
+                                                var popup2 = window.open('', '_blank', 'toolbar=0,location=0,menubar=0,width=600px,height=600px');
+                                                popup2.document.write('<div style="overflow: auto">');
+                                                popup2.document.write(`<img src="${urlll}" alt="" style="height: 95%"/>`);
+                                                popup2.document.write('</div>');
+                                                }
+
+                                            }); 
+
+                        var reader = new FileReader(); // Creating reader instance from FileReader() API
+                        reader.addEventListener("load", function () { // Setting up base64 URL on image
+                            img_i.src = reader.result;
+                            var tmpimage = new Image();
+                            tmpimage.onload = function() {
+                                var im_h = this.height;
+                                var im_w = this.width;
+                                img_i.original_h = im_h;
+                                img_i.original_w = im_w;
+                                console.log(`im: ${im_h}, ${im_w}`)
+                            }
+                            tmpimage.src = img_i.src;
+                        }, false);
+                        reader.readAsDataURL(input.files[ii]); // Converting file into data URL
+                        conainer_div.appendChild(img_i);
+                        return 1;
+                    }
+                }
+
+                var valid_images = null;
+                var valid_image_heights = null;
+                var valid_image_widths = null;
                 function readURL_i(input, ii, conainer_div) {
                     if (input.files && input.files[ii]) {
 
@@ -343,12 +429,22 @@
                         var reader = new FileReader(); // Creating reader instance from FileReader() API
                         reader.addEventListener("load", function () { // Setting up base64 URL on image
                             img_i.src = reader.result;
+                            var tmpimage = new Image();
+                            tmpimage.onload = function() {
+                                var im_h = this.height;
+                                var im_w = this.width;
+                                valid_image_heights[ii] = im_h;
+                                valid_image_widths[ii] = im_w;
+                                if (im_h<256||im_h>2048||im_w<256||im_w>2048) {
+                                    valid_images[ii] = 0;
+                                }
+                            }
+                            tmpimage.src = img_i.src;
                         }, false);
                         reader.readAsDataURL(input.files[ii]); // Converting file into data URL
                         conainer_div.appendChild(img_i);
                     }
                 }
-
                 function readURL(input) {
 
                     query_img_shown_urls = {};
@@ -373,9 +469,17 @@
                     query_images_div.innerHTML = '<div style="style="text-align: center; width: 50%;">You selected the following image(s) to search:</div><br/>';
                     var boxContainer = document.createElement("div");
                     boxContainer.style.cssText = "width: 100%; height: 100px; float: left; overflow: auto";
+
+                    valid_images = new Array(input.files.length);
+                    valid_images.fill(1);
+                    valid_image_heights = new Array(input.files.length);
+                    valid_image_widths = new Array(input.files.length);
+                    valid_image_heights.fill(0);
+                    valid_image_widths.fill(0);
                     for (let i = 0; i < input.files.length; ++i) {
                         readURL_i(input, i, boxContainer);
                     }
+
                     query_images_div.appendChild(boxContainer);
                     // Append the right div to the container
                     container11.appendChild(query_images_div);
@@ -455,25 +559,23 @@
 
                 var results_path = null;
 
-                function get_results_path(project_name) {
-
-                    let version_date = '20240208v4';
-                    if (project_name.includes('KenData')) {
-                        version_date = '20240202v4';
-                    }
-                    if (project_name.includes('ST')) {
-                        version_date = '20240202v4';
-                    }
-                    return `data_HiDARE_PLIP_20240208/${version_date}_${project_name}_v2`;
-                
-                }
+                // function get_results_path(project_name) {
+                //     let version_date = '20240208v4';
+                //     if (project_name.includes('KenData')) {
+                //         version_date = '20240202v4';
+                //     }
+                //     if (project_name.includes('ST')) {
+                //         version_date = '20240202v4';
+                //     }
+                //     //return `data_HiDARE_PLIP_20240208/${version_date}_${project_name}_v2`;
+                //     return `data_HiDARE_PLIP_20240208/${project_name}_big_images`;
+                // }
 
                 function show_image(project_name, slide_name, image_viewer, heatmap_viewer) {
 
-                    results_path = get_results_path(project_name);
-                    image_viewer.open(`${results_path}/big_images/${slide_name}_big_orig.dzi`);
+                    image_viewer.open(`data_HiDARE_PLIP_20240208/${project_name}_big_images/${slide_name}_big_orig.dzi`);
                     if (use_viewer21) {
-                        heatmap_viewer.open(`${results_path}/${slide_name}_big_attention_map.dzi`);
+                        heatmap_viewer.open(`data_HiDARE_PLIP_20240208/${project_name}_big_images/${slide_name}_big_attention_map.dzi`);
                     }
                 }
 
@@ -504,7 +606,7 @@
                     let container = document.getElementById(table_viewer);
                     container.innerHTML = "";
                     const slide_names = Object.keys(items);
-                    let table_str = '<table><tr><td>project_name</td><td>slide_name<div id="download_all_div"></div></td><td>thumbnails</td></tr>';
+                    let table_str = '<table><tr><td>cohort_name</td><td>slide_name<div id="download_all_div"></div></td><td>thumbnails</td></tr>';
                     for (let i = 0; i < slide_names.length; i++) {
                         let slide_name = ranks[i];
                         let project_name = items[slide_name]['project_name'];
@@ -574,8 +676,8 @@
                                     show_image(project_name, slide_name, image_viewer, heatmap_viewer);
                                     show_annotations(project_name, slide_name, anno_viewer, items[slide_name]['annotations']);
                                     hiddendivid.innerText = `${project_name}_${slide_name}`;
-                                    document.getElementById("infoContent").innerText = items[slide_name]['note'];
-                                    //document.getElementById("infoContent").innerHTML = items[slide_name]['note'];
+                                    //document.getElementById("infoContent").innerText = items[slide_name]['note'];
+                                    document.getElementById("infoContent").innerHTML = items[slide_name]['note'];
                                     commentcontent = items[slide_name]['note'];
                                 }
                                 let viewport_coord = image_viewer.viewport.imageToViewportCoordinates(x, y);
@@ -755,6 +857,7 @@
                         success: function (resultdata, status, request) {
                             if ('result' in resultdata) {
                                     response = resultdata['result'];
+                                    if (Object.keys(response['response']).length > 0) {
                                     add_items_to_right_column(response['response'], response['ranks'], viewer11, viewer21, anno11, 'viewer41', 'status_div2');
                                     document.getElementById(the_first_patch_id).click();
                                     //await new Promise(r => setTimeout(r, 3000));
@@ -829,6 +932,9 @@
                                     //     let viewport_coord = viewer11.viewport.imageToViewportCoordinates(the_first_x, the_first_y);
                                     //     viewer11.viewport.panTo(viewport_coord);
                                     // }
+                                    } else {
+                                        alert('image too big. ideal image size: from 256x256 to 2048x2048.')
+                                    }
                                 }
 
 
@@ -904,8 +1010,19 @@
                         params_dict['search_method'] = search_method;
                         params_dict['search_backbone'] = search_backbone;
 
+                        const allEqual = arr => arr.every(val => val === 1);
                         const count = files.length;
-                        if (count > 0) { 
+                        if( count > 5) {
+                            alert("Please select at most 5 images.")
+                        } else if (!allEqual(valid_images)) {
+                            var message = "Please make sure the image height or width is in the range of 256 to 2048 pixels. \n\nYour input is:\n";
+                            for (var i = 0; i < valid_image_heights.length; ++i) {
+                                message += `input ${i}: (height=${valid_image_heights[i]}, width=${valid_image_widths[i]})\n`;
+                            }
+                            alert(message);
+                            //alert("Please make sure the image height or width is in the range of 256 to 2048 pixels. ")
+                        } else if ((count>=1)&&(count<=5)) { 
+                            console.log("count:", count);
                             example_image = null;
                             params_dict['img_urls'] = [];
                             params_dict['filenames'] = [];
@@ -933,6 +1050,7 @@
                         } else if (example_image !== null) { 
                             params_dict['img_urls'] = [example_image];
                             params_dict['filenames'] = [example_image];
+                            valid_images = [1];
                             do_search(params_dict);
                         } else {
                             alert("Please select at least one image as input.");

@@ -46,9 +46,9 @@ def get_db():
 
 DATA_DIR = f'data_HiDARE_PLIP_20240208'
 ST_ROOT = f'{DATA_DIR}/assets/ST_kmeans_clustering/analysis/one_patient_top_128'
-project_names = ['TCGA-COMBINED', 'KenData_20240814', 'ST']  # do not change the order
-project_start_ids = {'TCGA-COMBINED': 0, 'KenData_20240814': 159011314, 'ST': 281115587}
-backbones = ['HERE_CONCH', 'HERE_UNI'] # choices: 'HERE_CONCH', 'HERE_PLIP', 'HERE_ProvGigaPath', 'HERE_UNI'
+project_names = ['TCGA-COMBINED', 'KenData_20240814', 'ST', 'CPTAC']  # do not change the order
+project_start_ids = {'TCGA-COMBINED': 0, 'KenData_20240814': 159011314, 'ST': 281115587, 'CPTAC': 281293653}
+backbones = ['HERE_CONCH'] # choices: 'HERE_CONCH', 'HERE_PLIP', 'HERE_ProvGigaPath', 'HERE_UNI'
 
 def load_cfg_from_json(json_file):
     with open(json_file, "r", encoding="utf-8") as reader:
@@ -186,7 +186,7 @@ for backbone in backbones:
 
 print('after loading faiss indexes ', psutil.virtual_memory().used/1024/1024/1024, "GB")
 
-with open(f'{DATA_DIR}/assets/randomly_1000_data_with_PLIP_ProvGigaPath_CONCH_20240814.pkl', 'rb') as fp: # with HERE_ProvGigaPath, with CONCH, random normal distribution
+with open(f'{DATA_DIR}/assets/randomly_1000_data_with_PLIP_ProvGigaPath_CONCH_20241219.pkl', 'rb') as fp: # with HERE_ProvGigaPath, with CONCH, random normal distribution
     randomly_1000_data = pickle.load(fp)
 
 font = ImageFont.truetype("Gidole-Regular.ttf", size=36)
@@ -321,6 +321,8 @@ def get_query_embedding(img_urls, resize=0, search_backbone='HERE_PLIP'):
     sizex, sizey = 256, 256
     # if 'CONCH' in search_backbone:
     #     sizex, sizey = 512, 512
+    image_urls_all = {}
+    results_dict = {}
     for img_url in img_urls:
         if img_url[:4] == 'http':
             image = Image.open(img_url.replace(
@@ -332,8 +334,11 @@ def get_query_embedding(img_urls, resize=0, search_backbone='HERE_PLIP'):
         else:
             image = Image.open(img_url).convert('RGB')
 
-        W, H = image.size        
+        W, H = image.size
         minWorH = min(min(W, H), minWorH)
+        if W>2048 or H>2048 or W<128 or H<128:
+            return None, image_urls_all, results_dict, minWorH
+
         if 0 < resize:
             resize_scale = 1. / 2**resize
             newW, newH = int(W*resize_scale), int(H*resize_scale)
@@ -348,8 +353,6 @@ def get_query_embedding(img_urls, resize=0, search_backbone='HERE_PLIP'):
 
     image_patches = [
         patch for patches in image_patches_all for patch in patches]
-    image_urls_all = {}
-    results_dict = {}
     with torch.no_grad():
 
         if search_backbone in ['HERE_PLIP', 'HERE_ProvGigaPath', 'HERE_CONCH', 'HERE_UNI']:
@@ -433,6 +436,10 @@ def image_search_main(params):
     if search_method == 'faiss_IndexFlatL2':
         search_project = 'ST'
 
+    for key, value in params.items():
+        if key != 'img_urls':
+            print(key, value)
+
     start = time.perf_counter()
 
     query_embedding, images_shown_urls, results_dict, minWorH = \
@@ -465,7 +472,7 @@ def image_search_main(params):
     db_conn, db_cursor = get_db()
 
     sql = f'select a.*, b.scale, b.patch_size_vis_level, b.svs_prefix, b.external_link, b.note from '\
-        'faiss_table_20240814 as a, image_table_20240814 as b where '\
+        'faiss_table_20241219 as a, image_table_20241219 as b where '\
             'a.rowid in %s and a.svs_prefix_id = b.svs_prefix_id and '\
                 'a.project_id = b.project_id'
     try:

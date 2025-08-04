@@ -36,6 +36,11 @@ def gene_search_ST():
 def hidare_help():
     return render_template('help.html')
 
+@app.route('/download')
+def hidare_download():
+    return render_template('download.html')
+
+
 @app.route('/contact')
 def hidare_contact():
     return render_template('contact.html')
@@ -202,7 +207,7 @@ def gene_search():
     removed_columns = ['id', 'c_id', 'gene_id']
     result_df = result_df.drop(columns=removed_columns)
 
-    sql = f'select note from image_table_20240814 where svs_prefix in %s'
+    sql = f'select note from image_table_20241219 where svs_prefix in %s'
     ST_prefixes = result_df['ST_prefix'].value_counts().index.values.tolist()
     try:
         db_cursor.execute(sql, (ST_prefixes, ))
